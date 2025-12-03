@@ -21,7 +21,7 @@ if len(exam_data)==0:
 
 
     from services.db_operation import fetch_data
-    select_col_list = ["id","exam_category","exam_name", "exam_date","is_CBT"]
+    select_col_list = ["id","exam_category","exam_name", "exam_date","is_CBT","target_hours"]
     exam_data = fetch_data("qualification", select_col_list)
     category = list({item["exam_category"] for item in exam_data})
 
@@ -38,14 +38,19 @@ if len(exam_data)==0:
             if not "exam_id" in  st.session_state:
                 st.session_state["exam_id"] = id[0]
             if is_CBT[0]:
-                exam_date = st.date_input("この試験はCBT方式なので、試験日を入力してください", key="exam_date")
+                exam_date = st.date_input("この試験はCBT方式なので、試験日を入力してください", key="exam_date",min_value="today")
 
             else:
                 exam_date_list =list({item["exam_date"] for item in exam_data if item["exam_name"]==st.session_state["exam_name"]})
                 exam_date = st.selectbox("試験日を選択してください", options=exam_date_list, index=0,key="exam_date")
             goal_study_time = st.number_input("目標学習時間（h/週）を入力してください。(例:8)",key="learning_time",step=1)
+            exam_target_hours = list({item["target_hours"] for item in exam_data if item["exam_name"]==st.session_state["exam_name"]})[0]
+
+            from services.unit_transform import total_to_week
+            st.session_state["week_target_hours"] = total_to_week(exam_date,exam_target_hours)
+            st.success(f"この資格に合格している人は週{st.session_state.week_target_hours}時間くらい勉強しています！")
             learning_materials = st.text_input("学習教材（参考書や問題集など）を入力してください", key="learning_materials")
-            
+
             if exam_name and exam_date and goal_study_time:
                 from services.db_operation import insert_data
                 qualification_info = {
