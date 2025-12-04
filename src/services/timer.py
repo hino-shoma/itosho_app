@@ -1,6 +1,7 @@
 import time
 import streamlit as st
 import datetime
+from services.db_operation import init_supabase
 
 # 初期化
 if "start_time" not in st.session_state:
@@ -20,7 +21,7 @@ def format_time(seconds):
 
 
 sb = st.sidebar
-
+supabase = init_supabase()
 # --- 勉強実績をSupabaseに保存する関数 ---
 def save_study_record(USER_ID, total_seconds):
     """
