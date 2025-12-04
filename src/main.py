@@ -137,42 +137,21 @@ else:
 
 # ------------ メイン画面 ------------
 # ライブラリインポート
-import streamlit as st
+
 import datetime
-from supabase import create_client, Client
-import uuid
-import os
+from services.db_operation import init_supabase
 
-# 環境変数（secrets.toml）から設定を取得
-REDIRECT_URL = st.secrets["redirect_uri"]
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-def init_supabase():
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    return supabase
-
-# ログインしているユーザー情報を取得
-user = supabase.auth.get_user()
-if user is None or user.user is None:
-    st.error("ログインしてください。")
-    st.stop()
-
-USER_ID = user.user.id  # ← ログイン中ユーザーID
-# todo 各画面マージ後に動くかどうか確認が必要
-
+supabase = init_supabase()
 # タイトル
 st.title("📓スキマックス📓")
 st.markdown("🔥 *スキマ時間を最大限に活用しよう！* 🔥")
 
 # ------ 勉強実績テーブルから連続日数を取得 ------
 import pandas as pd
-
 response = (supabase
             .table("Result")
             .select("date, time")
-            .eq("user_id", USER_ID)
+            .eq("user_id", st.session_state["user_id"] )
             .order("date", desc=False)
             .execute()
 )
@@ -359,7 +338,7 @@ def format_time(seconds):
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 # gifファイルパス（動作中に使用）
-gif_path = "pic/running.gif"
+gif_path = "assets/images/running.gif"
 # 1フレーム目を取得（停止中に使用）
 img = Image.open(gif_path)
 first_frame = img.convert("RGBA") # gifを画像に変換
@@ -418,7 +397,7 @@ def timer_complete():
 
     # --- DB へ保存 ---
     if total_time > 0:
-        save_study_record(USER_ID, total_time)
+        save_study_record(st.session_state["user_id"] , total_time)
     else:
         st.warning("0秒の記録は保存しません。")
     # todo 1分未満は保存しない、にしても良いかも
@@ -449,7 +428,7 @@ if st.session_state.running and st.session_state.start_time:
         # 再開からの時間 + 累積時間
         total_time = (time.time() - st.session_state.start_time) + st.session_state.accumulated_time
         time_placeholder.write(f"**勉強時間: {format_time(total_time)}**")
-        gif_placeholder.image("pic/running.gif") # gifを動かす
+        gif_placeholder.image(f"{gif_path}") # gifを動かす
         time.sleep(0.1)
         st.rerun()
 else:
