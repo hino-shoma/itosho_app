@@ -21,7 +21,7 @@ if len(exam_data)==0:
 
 
     from services.db_operation import fetch_data
-    select_col_list = ["id","exam_category","exam_name", "exam_date","is_CBT"]
+    select_col_list = ["id","exam_category","exam_name", "exam_date","is_CBT","target_hours"]
     exam_data = fetch_data("qualification", select_col_list)
     category = list({item["exam_category"] for item in exam_data})
 
@@ -38,14 +38,19 @@ if len(exam_data)==0:
             if not "exam_id" in  st.session_state:
                 st.session_state["exam_id"] = id[0]
             if is_CBT[0]:
-                exam_date = st.date_input("この試験はCBT方式なので、試験日を入力してください", key="exam_date")
+                exam_date = st.date_input("この試験はCBT方式なので、試験日を入力してください", key="exam_date",min_value="today")
 
             else:
                 exam_date_list =list({item["exam_date"] for item in exam_data if item["exam_name"]==st.session_state["exam_name"]})
                 exam_date = st.selectbox("試験日を選択してください", options=exam_date_list, index=0,key="exam_date")
             goal_study_time = st.number_input("目標学習時間（h/週）を入力してください。(例:8)",key="learning_time",step=1)
+            exam_target_hours = list({item["target_hours"] for item in exam_data if item["exam_name"]==st.session_state["exam_name"]})[0]
+
+            from services.unit_transform import total_to_week
+            st.session_state["week_target_hours"] = total_to_week(exam_date,exam_target_hours)
+            st.success(f"この資格に合格している人は週{st.session_state.week_target_hours}時間くらい勉強しています！")
             learning_materials = st.text_input("学習教材（参考書や問題集など）を入力してください", key="learning_materials")
-            
+
             if exam_name and exam_date and goal_study_time:
                 from services.db_operation import insert_data
                 qualification_info = {
@@ -132,42 +137,21 @@ else:
 
 # ------------ メイン画面 ------------
 # ライブラリインポート
-import streamlit as st
+
 import datetime
-from supabase import create_client, Client
-import uuid
-import os
+from services.db_operation import init_supabase
 
-# 環境変数（secrets.toml）から設定を取得
-REDIRECT_URL = st.secrets["redirect_uri"]
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-def init_supabase():
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    return supabase
-
-# ログインしているユーザー情報を取得
-user = supabase.auth.get_user()
-if user is None or user.user is None:
-    st.error("ログインしてください。")
-    st.stop()
-
-USER_ID = user.user.id  # ← ログイン中ユーザーID
-# todo 各画面マージ後に動くかどうか確認が必要
-
+supabase = init_supabase()
 # タイトル
 st.title("📓スキマックス📓")
 st.markdown("🔥 *スキマ時間を最大限に活用しよう！* 🔥")
 
 # ------ 勉強実績テーブルから連続日数を取得 ------
 import pandas as pd
-
 response = (supabase
             .table("Result")
             .select("date, time")
-            .eq("user_id", USER_ID)
+            .eq("user_id", st.session_state["user_id"] )
             .order("date", desc=False)
             .execute()
 )
@@ -354,7 +338,7 @@ def format_time(seconds):
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 # gifファイルパス（動作中に使用）
-gif_path = "pic/running.gif"
+gif_path = "assets/images/running.gif"
 # 1フレーム目を取得（停止中に使用）
 img = Image.open(gif_path)
 first_frame = img.convert("RGBA") # gifを画像に変換
@@ -413,7 +397,7 @@ def timer_complete():
 
     # --- DB へ保存 ---
     if total_time > 0:
-        save_study_record(USER_ID, total_time)
+        save_study_record(st.session_state["user_id"] , total_time)
     else:
         st.warning("0秒の記録は保存しません。")
     # todo 1分未満は保存しない、にしても良いかも
@@ -444,7 +428,7 @@ if st.session_state.running and st.session_state.start_time:
         # 再開からの時間 + 累積時間
         total_time = (time.time() - st.session_state.start_time) + st.session_state.accumulated_time
         time_placeholder.write(f"**勉強時間: {format_time(total_time)}**")
-        gif_placeholder.image("pic/running.gif") # gifを動かす
+        gif_placeholder.image(f"{gif_path}") # gifを動かす
         time.sleep(0.1)
         st.rerun()
 else:
