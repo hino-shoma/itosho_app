@@ -6,6 +6,13 @@ from langgraph.checkpoint.memory import MemorySaver
 from services.db_operation import init_supabase
 
 # TODO:セッション情報をもとに資格の情報を検索しているため、メイン画面に一度行かないと正しく情報の紐づけができない
+st.set_page_config(
+    page_title="AIコーチング",
+    page_icon="🧊",
+    layout="wide",
+    initial_sidebar_state="expanded",
+
+)
 supabase =init_supabase()
 try:
     exam_list = json.loads(supabase.table("Learning materials").select("user_id,exam_id,exam_date,learning_materials").eq("user_id",str(st.session_state.user_id)).execute().model_dump_json())
