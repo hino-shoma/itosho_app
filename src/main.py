@@ -281,6 +281,20 @@ else:
 # todo 5分以上経過で表示変える
 # todo gif要らないor別のものにする
 
+
+#==========================TODOを1つずつ表示================================
+from services.show_todo import show_must_todo
+from streamlit_product_card import product_card
+show_must_todo(st.session_state["user_id"])
+
+st.subheader("今日のTODO")
+product_card(
+    product_name=st.session_state["todo_title"],
+    description=st.session_state["todo_content"],
+    price=st.session_state["todo_end_date"],
+    button_text="実施する",
+    key="core_name_price_button"
+)
 # ==========================勉強頑張った感を出す==============================
 from services.show_image import show_image
 show_image(st.session_state["user_id"])
