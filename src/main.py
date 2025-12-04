@@ -133,3 +133,332 @@ if len(exam_data)==0:
                             response_container.write(full_response)
 else:
     st.success("資格登録が完了済みです。")
+
+
+# ------------ メイン画面 ------------
+# ライブラリインポート
+import streamlit as st
+import datetime
+from supabase import create_client, Client
+import uuid
+import os
+
+# 環境変数（secrets.toml）から設定を取得
+REDIRECT_URL = st.secrets["redirect_uri"]
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+def init_supabase():
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    return supabase
+
+# ログインしているユーザー情報を取得
+user = supabase.auth.get_user()
+if user is None or user.user is None:
+    st.error("ログインしてください。")
+    st.stop()
+
+USER_ID = user.user.id  # ← ログイン中ユーザーID
+# todo 各画面マージ後に動くかどうか確認が必要
+
+# タイトル
+st.title("📓スキマックス📓")
+st.markdown("🔥 *スキマ時間を最大限に活用しよう！* 🔥")
+
+# ------ 勉強実績テーブルから連続日数を取得 ------
+import pandas as pd
+
+response = (supabase
+            .table("Result")
+            .select("date, time")
+            .eq("user_id", USER_ID)
+            .order("date", desc=False)
+            .execute()
+)
+dates = [record["date"] for record in response.data]
+df = pd.DataFrame(response.data)
+df["date"] = pd.to_datetime(df["date"])
+df["time"] = pd.to_numeric(df["time"])
+
+# --- 連続学習日数を計算 ---
+def calc_consecutive(dates):
+    if len(dates) == 0:
+        return 0, 0
+    
+    dates = sorted(list(set(dates)))  # 重複削除とソート
+    
+    consecutive = 1
+    max_consecutive = 1
+    current_consecutive = 1
+    
+    for i in range(1, len(dates)):
+        if (dates[i] - dates[i-1]).days == 1:
+            consecutive += 1
+        else:
+            consecutive = 1
+        max_consecutive = max(max_consecutive, consecutive)
+    
+    # 直近が昨日・今日で途切れていないか確認
+    today = pd.Timestamp("today").normalize()
+    
+    if dates[-1] == today:
+        current_consecutive =  consecutive
+    elif dates[-1] == today - pd.Timedelta(days=1):
+        current_consecutive = consecutive
+    else:
+        current_consecutive = 0
+    
+    return current_consecutive, max_consecutive
+
+# ------ 勉強実績テーブルから週間学習時間を取得 ------
+def calc_weekly(df):
+    today = pd.Timestamp.today().normalize()
+    # 今週の学習時間
+    monday = today - pd.Timedelta(days = today.weekday()) # 月曜日の日付を計算
+    df_this_week = df[df["date"].between(monday, today)] # 月曜～今日まで
+    this_week_seconds = df_this_week["time"].sum()
+    # 先週の学習時間
+    last_monday = monday - pd.Timedelta(days = 7)
+    last_sunday = monday - pd.Timedelta(days = 1)
+    df_last_week = df[df["date"].between(last_monday, last_sunday)]
+    last_week_seconds = df_last_week["time"].sum()
+    
+    # 時間と分に換算（今週のみ）
+    hours = this_week_seconds // 3600
+    minutes = (this_week_seconds % 3600) // 60
+    
+    # 先週との比較
+    if last_week_seconds == 0:
+        delta_percent = 100 # 先週ゼロの時：100%と表示
+        delta_text = f"+{delta_percent}%"
+    else:
+        delta_percent = round((this_week_seconds / last_week_seconds) * 100)
+        delta_text = f"{delta_percent}%"
+        
+    return hours, minutes, delta_text
+
+# ------ 資格テーブルから残り日数を取得 ------
+# --- 週間の目標学習時間を計算（total_time & exam_date より）---
+def calc_weekly_target(target_hours, exam_date):
+    today = pd.Timestamp.today().normalize()
+
+    # 残り日数
+    remaining_days = (exam_date - today).days
+    if remaining_days <= 0:
+        remaining_days = 1  # 過ぎていてもエラー防止
+
+    # 1日あたりの目標学習時間（秒）
+    daily_target_seconds = int(target_hours) * 3600 / remaining_days
+
+    # 今週の経過日数（月曜〜今日）
+    monday = today - pd.Timedelta(days=today.weekday())
+    days_this_week = (today - monday).days + 1
+
+    # 今週の目標時間（秒）
+    weekly_target_seconds = daily_target_seconds * days_this_week
+
+    # 時間＋分へ変換
+    hours = int(weekly_target_seconds // 3600)
+    minutes = int((weekly_target_seconds % 3600) // 60)
+
+    return hours, minutes
+
+# --- 資格テーブルから試験日(exam_date)を取得 ---
+target_id = 2 # 現在は固定の資格idを取得
+# todo qualificationテーブルから資格idを取ってくる処理が必要
+
+response = (supabase
+            .table("qualification")
+            .select("exam_date, target_hours")
+            .eq("id", target_id)
+            .single()
+            .execute())
+exam_date_str = response.data["exam_date"]
+target_seconds = int(response.data["target_hours"]) * 3600 # 目標学習時間を秒に変換
+
+# --- exam_dateが空欄だった場合の処理 ---
+if exam_date_str is None:
+    remaining_days_text = ""
+    weekly_target_text = ""
+else:
+    exam_date = datetime.date.fromisoformat(exam_date_str) # exam_dateをstrからdate型に変換
+    # 試験日までの日数計算
+    today = datetime.date.today()
+    remaining_days = exam_date - today
+    remaining_days_text = f"{remaining_days.days} 日"
+    # --- 週間目標学習時間の計算 ---
+    weekly_target_hours, weekly_target_minutes = calc_weekly_target(
+        target_seconds,
+        pd.to_datetime(exam_date)
+    )
+    weekly_target_text = f"{weekly_target_hours}時間 {weekly_target_minutes}分"
+
+
+# --- streamlitに表示 ---
+# 連続学習日数
+current_consecutive, max_consecutive = calc_consecutive(df["date"].tolist())
+current_consecutive_text = f"{current_consecutive}日"
+max_text = f"{max_consecutive}日"
+
+# 週間学習時間
+weekly_hours, weekly_minutes, delta_text = calc_weekly(df)
+weekly_text = f"{weekly_hours}時間 {weekly_minutes}分"
+
+# todo 目標学習時間に対する進捗の比較
+
+# ------ ダッシュボード ------
+st.subheader("📌勉強ダッシュボード")
+cards_container = st.container(horizontal=True)
+with cards_container:
+    # 連続日数
+    with st.container(height = 220, border=True):
+        st.info("###### 🔥 連続学習日数")
+        col1, col2 = st.columns(2, vertical_alignment="bottom")
+        with col1:
+            st.metric("", current_consecutive_text, delta=f"best: {max_text}")
+        with col2:
+            if max_consecutive == current_consecutive:
+                st.markdown(''':green[best更新中🎉]''')
+    
+    # 今週の学習時間
+    with st.container(height = 220, border=True):
+        st.info("###### 🖋 今週の学習時間")
+        st.metric("", weekly_text, "前週比: " + delta_text)
+    # todo 目標学習時間との比較
+    
+    # 試験日までの日数
+    with st.container(height = 220, border=True):
+        st.info("###### 📅 試験まであと")
+        st.metric("", remaining_days_text, "")
+
+
+# ---------- ここからタイマー機能 ----------
+# ライブラリインポート
+import time
+from PIL import Image
+
+# タイマー機能
+sb = st.sidebar
+sb.header("⏰勉強タイマー")
+
+# 初期化
+if "start_time" not in st.session_state:
+    st.session_state.start_time = None
+if "running" not in st.session_state:
+    st.session_state.running = False
+if "accumulated_time" not in st.session_state:
+    st.session_state.accumulated_time = 0  # 累積時間（トータル時間計算に利用）
+
+# 時間をhh:mm:ss表示する関数
+def format_time(seconds):
+    seconds = int(seconds)
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    s = seconds % 60
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
+# gifファイルパス（動作中に使用）
+gif_path = "pic/running.gif"
+# 1フレーム目を取得（停止中に使用）
+img = Image.open(gif_path)
+first_frame = img.convert("RGBA") # gifを画像に変換
+
+# --- 勉強実績をSupabaseに保存する関数 ---
+def save_study_record(USER_ID, total_seconds):
+    """
+    勉強実績をSupabaseの Result テーブルに保存
+    """
+    today = datetime.date.today().isoformat()
+
+    record = {
+        "id": str(uuid.uuid4()),
+        "user_id": USER_ID,
+        "date": today,
+        "time": int(total_seconds)
+    }
+
+    response = (supabase
+                .table("Result")
+                .insert(record)
+                .execute())
+
+    if response.data:
+        sb.success("勉強実績を記録しました！")
+    else:
+        sb.error("勉強実績の記録に失敗しました。")
+
+# --- コールバック関数 ---
+def timer_start():
+    st.session_state.start_time = time.time()
+    st.session_state.running = True
+    
+def timer_stop():
+    if st.session_state.start_time:
+        st.session_state.accumulated_time += time.time() - st.session_state.start_time
+    st.session_state.running = False
+
+def timer_resume():
+    st.session_state.start_time = time.time()
+    st.session_state.running = True
+
+def timer_complete():
+    """
+    記録ボタン：
+    ① total_time を確定
+    ② Supabase の Result テーブルに保存
+    ③ タイマー初期化
+    """
+    st.session_state.running = False
+
+    if st.session_state.running and st.session_state.start_time:
+        st.session_state.accumulated_time += time.time() - st.session_state.start_time
+
+    total_time = st.session_state.accumulated_time
+
+    # --- DB へ保存 ---
+    if total_time > 0:
+        save_study_record(USER_ID, total_time)
+    else:
+        st.warning("0秒の記録は保存しません。")
+    # todo 1分未満は保存しない、にしても良いかも
+
+    # 初期化
+    st.session_state.start_time = None
+    st.session_state.accumulated_time = 0
+
+# --- start<->stopボタンの切り替え（レスポンシブ） ---
+# start/記録ボタンをレスポンシブに配置
+with sb.container(horizontal=True):
+    if st.session_state.running:
+        st.button("ストップ", width = 90, on_click = timer_stop) # コールバック関数呼び出し
+    else:
+        if st.session_state.accumulated_time > 0:
+            st.button("再開", width = 90, on_click = timer_resume) # 同上
+        else:
+            st.button("スタート", width = 90, on_click = timer_start) # 同上
+    st.button("記録", width = 90, on_click = timer_complete) # 同上
+
+# サイドバーに勉強時間を表示
+time_placeholder = sb.empty()
+gif_placeholder = sb.empty()
+
+# --- 動作中 ---
+if st.session_state.running and st.session_state.start_time:
+    while st.session_state.running:
+        # 再開からの時間 + 累積時間
+        total_time = (time.time() - st.session_state.start_time) + st.session_state.accumulated_time
+        time_placeholder.write(f"**勉強時間: {format_time(total_time)}**")
+        gif_placeholder.image("pic/running.gif") # gifを動かす
+        time.sleep(0.1)
+        st.rerun()
+else:
+    if st.session_state.start_time: # ストップウォッチ停止中
+        total_time = time.time() - st.session_state.start_time
+        time_placeholder.write(f"**勉強時間: {format_time(total_time)}**")
+        gif_placeholder.image(first_frame) # gifを止める
+    else: # 初期 or 記録ボタン押下後
+        time_placeholder.write("**勉強時間: 00:00:00**")
+# todo 毎秒画面更新されるので、部分的に更新する処理が可能か検討する
+# todo 5分以上経過で表示変える
+# todo gif要らないor別のものにする
