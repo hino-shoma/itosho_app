@@ -246,7 +246,7 @@ with cards_container:
 
 # ---------- ここからタイマー機能 ----------
 # ライブラリインポート
-from services.timer import timer_start,timer_stop,timer_complete,timer_resume,format_time
+from services.timer import timer_start,timer_stop,timer_complete,timer_resume,format_time,timer_fragment
 from PIL import Image
 import time
 # タイマー機能
@@ -288,23 +288,20 @@ with sb.container(horizontal=True):
 
 
 
-# --- 動作中 ---
-if st.session_state.running and st.session_state.start_time:
-    while st.session_state.running:
-        # 再開からの時間 + 累積時間
-        total_time = (time.time() - st.session_state.start_time) + st.session_state.accumulated_time
-        time_placeholder.subheader(f"**{format_time(total_time)}**")
-        gif_placeholder.image(f"{gif_path}") # gifを動かす
-        time.sleep(0.1)
-        st.rerun()
-else:
-    if st.session_state.start_time: # ストップウォッチ停止中
-        total_time = time.time() - st.session_state.start_time
-        time_placeholder.subheader(f"**{format_time(total_time)}**")
-        gif_placeholder.image(first_frame) # gifを止める
-    else: # 初期 or 記録ボタン押下後
-        time_placeholder.subheader("**00:00:00**")
-# todo 毎秒画面更新されるので、部分的に更新する処理が可能か検討する
+# fragment の呼び出し（部分更新）
+if st.session_state.running:
+    with st.sidebar:
+        # gifの 1 フレーム目（停止表示用）
+        img = Image.open(gif_path)
+        first_frame = img.convert("RGBA")
+        timer_fragment(gif_path, first_frame)
+elif st.session_state.start_time: # ストップウォッチ停止中
+    total_time = st.session_state.accumulated_time
+    time_placeholder.subheader(f"**{format_time(total_time)}**")
+    gif_placeholder.image(first_frame) # gifを止める
+else: # 初期 or 記録ボタン押下後
+    time_placeholder.subheader("**00:00:00**")
+    gif_placeholder.image(first_frame)
 # todo 5分以上経過で表示変える
 # todo gif要らないor別のものにする
 
