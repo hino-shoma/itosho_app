@@ -83,3 +83,16 @@ def timer_complete():
     # 初期化
     st.session_state.start_time = None
     st.session_state.accumulated_time = 0
+
+# frangmentの定義
+@st.fragment
+def timer_fragment(gif_path, first_frame):
+    time_placeholder = st.empty()
+    gif_placeholder = st.empty()
+    
+    # 動作中
+    while st.session_state.running:
+        total_time = (time.time() - st.session_state.start_time) + st.session_state.accumulated_time
+        time_placeholder.subheader(f"**{format_time(total_time)}**")
+        gif_placeholder.image(f"{gif_path}") # gifを動かす
+        time.sleep(0.1)
