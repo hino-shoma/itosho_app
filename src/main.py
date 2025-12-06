@@ -287,6 +287,7 @@ with sb.container(horizontal=True):
     st.button("記録", width = 90, on_click = timer_complete) # 同上
 
 
+
 # --- 動作中 ---
 if st.session_state.running and st.session_state.start_time:
     while st.session_state.running:
