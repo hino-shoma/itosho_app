@@ -1,7 +1,7 @@
 import streamlit as st
 from services.db_operation import google_login
 st.set_page_config(
-    page_title="スキマックス",
+    page_title="すきまっくす",
     page_icon="🧊",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -14,8 +14,8 @@ def apply_custom_css(css_file):
 apply_custom_css("src/data/assets/css/style.css")
 
 # タイトル
-st.title("📓スキマックス📓")
-st.markdown("🔥 *スキマ時間を最大限に活用しよう！* 🔥")
+st.title("📓すきまっくす📓")
+st.markdown("🔥 *すき間時間を最大限に活用しよう！* 🔥")
 
 # ============== ログイン処理=============================
 session = google_login()
@@ -261,7 +261,9 @@ if "accumulated_time" not in st.session_state:
     st.session_state.accumulated_time = 0  # 累積時間（トータル時間計算に利用）
 
 sb = st.sidebar
-sb.header("⏰勉強タイマー")
+from services.submenu import submenu
+st.write(submenu()) # メニュー一覧を表示
+sb.subheader("⏰勉強タイマー")
 
 # gifファイルパス（動作中に使用）
 gif_path = "assets/images/running.gif"
