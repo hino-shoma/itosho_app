@@ -285,6 +285,7 @@ with sb.container(horizontal=True):
 time_placeholder = sb.empty()
 gif_placeholder = sb.empty()
 
+
 # --- 動作中 ---
 if st.session_state.running and st.session_state.start_time:
     while st.session_state.running:
