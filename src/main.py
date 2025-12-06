@@ -309,18 +309,26 @@ else:
 
 
 #==========================TODOを1つずつ表示================================
-from services.show_todo import show_must_todo
+from services.show_todo import show_must_todo,todo_is_done,go_to_todo_register_page
 from streamlit_product_card import product_card
-show_must_todo(st.session_state["user_id"])
-
 st.subheader("今日のTODO")
-product_card(
-    product_name=st.session_state["todo_title"],
-    description=st.session_state["todo_content"],
-    price=st.session_state["todo_end_date"],
-    button_text="実施する",
-    key="core_name_price_button"
-)
-# ==========================勉強頑張った感を出す==============================
-from services.show_image import show_image
-show_image(st.session_state["user_id"])
+is_todo = show_must_todo(st.session_state["user_id"]) # まだ終わっていないtodoがあるか判定
+
+if is_todo:
+    product_card(
+        product_name=st.session_state["todo_title"],
+        description=st.session_state["todo_content"],
+        price=f"終了目標日：{st.session_state['todo_end_date']}",
+        button_text="実施する",
+        key="core_name_price_button",
+        on_button_click=todo_is_done
+    )
+else:
+    product_card(
+        product_name="すばらしい！！今日のタスクは完了しました！",
+        description="新しくタスクを追加したい場合は下のボタンをクリック！",
+        button_text="TODOを登録する",
+        key="todo_register_button",
+        on_button_click=go_to_todo_register_page
+    )
+
