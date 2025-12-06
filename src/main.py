@@ -6,6 +6,12 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+# cssの適用
+def apply_custom_css(css_file):
+    with open(css_file) as f:
+        css = f.read()
+    st.markdown(f'<style>{css}</style>', unsafe_allow_html=True)
+apply_custom_css("src/data/assets/css/style.css")
 
 # タイトル
 st.title("📓スキマックス📓")

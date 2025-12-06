@@ -1,0 +1,19 @@
+div[data-testid="stAlert"] {
+    text-align: center;
+}
+div[data-testid="stMetricValue"]{
+    text-align: center;
+}
+
+div[data-testid="stMetricDelta"]{
+    text-align: center !important;
+}
+
+
+div[data-testid="stHorizontalBlock"]{
+    justify-content: center !important;
+}
+
+div[data-testid='stMarkdownContainer']>h3{
+    text-align: center;
+}
