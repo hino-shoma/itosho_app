@@ -35,9 +35,15 @@ def save_study_record(USER_ID, total_seconds):
                 .execute())
 
     if response.data:
-        sb.success("勉強実績を記録しました！")
+        try:
+            sb.success("勉強実績を記録しました！")
+        except:
+            st.success("勉強実績を記録しました！")
     else:
-        sb.error("勉強実績の記録に失敗しました。")
+        try:
+            sb.error("勉強実績の記録に失敗しました。")
+        except:
+            st.error("勉強実績の記録に失敗しました。")
 
 # --- コールバック関数 ---
 def timer_start():
