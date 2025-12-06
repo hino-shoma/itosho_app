@@ -6,14 +6,16 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-session = google_login()
-
-st.session_state["user_id"] = session["user"]["id"]
 
 # タイトル
 st.title("📓スキマックス📓")
 st.markdown("🔥 *スキマ時間を最大限に活用しよう！* 🔥")
 
+# ============== ログイン処理=============================
+session = google_login()
+st.session_state["user_id"] = session["user"]["id"] # セッションにuser_idを入れる
+
+# ============== 資格選択画面 ==============================
 from services.db_operation import init_supabase
 import json
 supabase = init_supabase()
