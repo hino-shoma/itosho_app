@@ -3,13 +3,7 @@ import streamlit as st
 import datetime
 from services.db_operation import init_supabase
 
-# 初期化
-if "start_time" not in st.session_state:
-    st.session_state.start_time = None
-if "running" not in st.session_state:
-    st.session_state.running = False
-if "accumulated_time" not in st.session_state:
-    st.session_state.accumulated_time = 0  # 累積時間（トータル時間計算に利用）
+
 
 # 時間をhh:mm:ss表示する関数
 def format_time(seconds):
