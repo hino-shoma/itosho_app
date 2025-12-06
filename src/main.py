@@ -1,7 +1,7 @@
 import streamlit as st
 from services.db_operation import google_login
 st.set_page_config(
-    page_title="スキマックス",
+    page_title="すきまっくす",
     page_icon="🧊",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -14,8 +14,8 @@ def apply_custom_css(css_file):
 apply_custom_css("src/data/assets/css/style.css")
 
 # タイトル
-st.title("📓スキマックス📓")
-st.markdown("🔥 *スキマ時間を最大限に活用しよう！* 🔥")
+st.title("📓すきまっくす📓")
+st.markdown("🔥 *すき間時間を最大限に活用しよう！* 🔥")
 
 # ============== ログイン処理=============================
 session = google_login()
@@ -212,18 +212,18 @@ weekly_text = f"{weekly_hours}時間 {weekly_minutes}分"
 # todo 目標学習時間に対する進捗の比較
 
 # ------ ダッシュボード ------
-st.subheader("📌勉強ダッシュボード")
+# st.subheader("📌勉強ダッシュボード")
 cards_container = st.container(horizontal=True)
 with cards_container:
     # 連続日数
     with st.container(height = 220, border=True):
         st.info("###### 🔥 連続学習日数")
-        col1, col2 = st.columns(2, vertical_alignment="bottom")
-        with col1:
-            st.metric("", current_consecutive_text, delta=f"best: {max_text}")
-        with col2:
-            if max_consecutive == current_consecutive:
-                st.markdown(''':green[best更新中🎉]''')
+        # col1, col2 = st.columns(2, vertical_alignment="bottom")
+        # with col1:
+        st.metric("", current_consecutive_text, delta=f"best: {max_text}")
+        if max_consecutive == current_consecutive:
+            # with col2:
+            st.markdown(''':green[best更新中🎉]''')
     
     # 今週の学習時間
     with st.container(height = 220, border=True):
@@ -261,13 +261,18 @@ if "accumulated_time" not in st.session_state:
     st.session_state.accumulated_time = 0  # 累積時間（トータル時間計算に利用）
 
 sb = st.sidebar
-sb.header("⏰勉強タイマー")
+from services.submenu import submenu
+st.write(submenu()) # メニュー一覧を表示
+sb.subheader("⏰勉強タイマー")
 
 # gifファイルパス（動作中に使用）
 gif_path = "assets/images/running.gif"
 # 1フレーム目を取得（停止中に使用）
 img = Image.open(gif_path)
 first_frame = img.convert("RGBA") # gifを画像に変換
+# サイドバーに勉強時間を表示
+time_placeholder = sb.empty()
+gif_placeholder = sb.empty()
 
 # --- start<->stopボタンの切り替え（レスポンシブ） ---
 # start/記録ボタンをレスポンシブに配置
@@ -278,12 +283,9 @@ with sb.container(horizontal=True):
         if st.session_state.accumulated_time > 0:
             st.button("再開", width = 90, on_click = timer_resume) # 同上
         else:
-            st.button("スタート", width = 90, on_click = timer_start) # 同上
+            st.button("スタート", width = 90, on_click = timer_start,type="primary") # 同上
     st.button("記録", width = 90, on_click = timer_complete) # 同上
 
-# サイドバーに勉強時間を表示
-time_placeholder = sb.empty()
-gif_placeholder = sb.empty()
 
 
 # --- 動作中 ---
@@ -291,35 +293,43 @@ if st.session_state.running and st.session_state.start_time:
     while st.session_state.running:
         # 再開からの時間 + 累積時間
         total_time = (time.time() - st.session_state.start_time) + st.session_state.accumulated_time
-        time_placeholder.write(f"**勉強時間: {format_time(total_time)}**")
+        time_placeholder.subheader(f"**{format_time(total_time)}**")
         gif_placeholder.image(f"{gif_path}") # gifを動かす
         time.sleep(0.1)
         st.rerun()
 else:
     if st.session_state.start_time: # ストップウォッチ停止中
         total_time = time.time() - st.session_state.start_time
-        time_placeholder.write(f"**勉強時間: {format_time(total_time)}**")
+        time_placeholder.subheader(f"**{format_time(total_time)}**")
         gif_placeholder.image(first_frame) # gifを止める
     else: # 初期 or 記録ボタン押下後
-        time_placeholder.write("**勉強時間: 00:00:00**")
+        time_placeholder.subheader("**00:00:00**")
 # todo 毎秒画面更新されるので、部分的に更新する処理が可能か検討する
 # todo 5分以上経過で表示変える
 # todo gif要らないor別のものにする
 
 
 #==========================TODOを1つずつ表示================================
-from services.show_todo import show_must_todo
+from services.show_todo import show_must_todo,todo_is_done,go_to_todo_register_page
 from streamlit_product_card import product_card
-show_must_todo(st.session_state["user_id"])
-
 st.subheader("今日のTODO")
-product_card(
-    product_name=st.session_state["todo_title"],
-    description=st.session_state["todo_content"],
-    price=st.session_state["todo_end_date"],
-    button_text="実施する",
-    key="core_name_price_button"
-)
-# ==========================勉強頑張った感を出す==============================
-from services.show_image import show_image
-show_image(st.session_state["user_id"])
+is_todo = show_must_todo(st.session_state["user_id"]) # まだ終わっていないtodoがあるか判定
+
+if is_todo:
+    product_card(
+        product_name=st.session_state["todo_title"],
+        description=st.session_state["todo_content"],
+        price=f"終了目標日：{st.session_state['todo_end_date']}",
+        button_text="実施する",
+        key="core_name_price_button",
+        on_button_click=todo_is_done
+    )
+else:
+    product_card(
+        product_name="すばらしい！！今日のタスクは完了しました！",
+        description="新しくタスクを追加したい場合は下のボタンをクリック！",
+        button_text="TODOを登録する",
+        key="todo_register_button",
+        on_button_click=go_to_todo_register_page
+    )
+
