@@ -229,6 +229,13 @@ with cards_container:
     with st.container(height = 220, border=True):
         st.info("###### 📅 試験まであと")
         st.metric("", remaining_days_text, "")
+        
+    with st.container(height = 220, border=True):
+        st.info("###### 📅 今までの勉強時間を例えるなら...")
+        with st.container(horizontal=True):
+            from services.show_image import show_image
+            show_image(st.session_state["user_id"])
+        
 
 
 # ---------- ここからタイマー機能 ----------
