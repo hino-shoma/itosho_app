@@ -1,23 +1,25 @@
 import streamlit as st
 from services.db_operation import google_login
-
-session = google_login()
-
-st.session_state["user_id"] = session["user"]["id"]
-
-# タイトル
-st.title("📓スキマックス📓")
-st.markdown("🔥 *スキマ時間を最大限に活用しよう！* 🔥")
-
-from services.db_operation import init_supabase
-import json
-supabase = init_supabase()
 st.set_page_config(
     page_title="スキマックス",
     page_icon="🧊",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# タイトル
+st.title("📓スキマックス📓")
+st.markdown("🔥 *スキマ時間を最大限に活用しよう！* 🔥")
+
+# ============== ログイン処理=============================
+session = google_login()
+st.session_state["user_id"] = session["user"]["id"] # セッションにuser_idを入れる
+
+# ============== 資格選択画面 ==============================
+from services.db_operation import init_supabase
+import json
+supabase = init_supabase()
+
 
 exam_data = json.loads(supabase.table("Learning materials").select("user_id").eq("user_id",str(st.session_state.user_id)).execute().model_dump_json())["data"]
 if len(exam_data)==0:
@@ -235,6 +237,15 @@ from services.timer import timer_start,timer_stop,timer_complete,timer_resume,fo
 from PIL import Image
 import time
 # タイマー機能
+
+
+# 初期化
+if "start_time" not in st.session_state:
+    st.session_state.start_time = None
+if "running" not in st.session_state:
+    st.session_state.running = False
+if "accumulated_time" not in st.session_state:
+    st.session_state.accumulated_time = 0  # 累積時間（トータル時間計算に利用）
 
 sb = st.sidebar
 sb.header("⏰勉強タイマー")
