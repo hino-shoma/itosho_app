@@ -212,18 +212,18 @@ weekly_text = f"{weekly_hours}時間 {weekly_minutes}分"
 # todo 目標学習時間に対する進捗の比較
 
 # ------ ダッシュボード ------
-st.subheader("📌勉強ダッシュボード")
+# st.subheader("📌勉強ダッシュボード")
 cards_container = st.container(horizontal=True)
 with cards_container:
     # 連続日数
     with st.container(height = 220, border=True):
         st.info("###### 🔥 連続学習日数")
-        col1, col2 = st.columns(2, vertical_alignment="bottom")
-        with col1:
-            st.metric("", current_consecutive_text, delta=f"best: {max_text}")
-        with col2:
-            if max_consecutive == current_consecutive:
-                st.markdown(''':green[best更新中🎉]''')
+        # col1, col2 = st.columns(2, vertical_alignment="bottom")
+        # with col1:
+        st.metric("", current_consecutive_text, delta=f"best: {max_text}")
+        if max_consecutive == current_consecutive:
+            # with col2:
+            st.markdown(''':green[best更新中🎉]''')
     
     # 今週の学習時間
     with st.container(height = 220, border=True):
@@ -268,6 +268,9 @@ gif_path = "assets/images/running.gif"
 # 1フレーム目を取得（停止中に使用）
 img = Image.open(gif_path)
 first_frame = img.convert("RGBA") # gifを画像に変換
+# サイドバーに勉強時間を表示
+time_placeholder = sb.empty()
+gif_placeholder = sb.empty()
 
 # --- start<->stopボタンの切り替え（レスポンシブ） ---
 # start/記録ボタンをレスポンシブに配置
@@ -278,7 +281,7 @@ with sb.container(horizontal=True):
         if st.session_state.accumulated_time > 0:
             st.button("再開", width = 90, on_click = timer_resume) # 同上
         else:
-            st.button("スタート", width = 90, on_click = timer_start) # 同上
+            st.button("スタート", width = 90, on_click = timer_start,type="primary") # 同上
     st.button("記録", width = 90, on_click = timer_complete) # 同上
 
 # サイドバーに勉強時間を表示
@@ -290,17 +293,17 @@ if st.session_state.running and st.session_state.start_time:
     while st.session_state.running:
         # 再開からの時間 + 累積時間
         total_time = (time.time() - st.session_state.start_time) + st.session_state.accumulated_time
-        time_placeholder.write(f"**勉強時間: {format_time(total_time)}**")
+        time_placeholder.subheader(f"**{format_time(total_time)}**")
         gif_placeholder.image(f"{gif_path}") # gifを動かす
         time.sleep(0.1)
         st.rerun()
 else:
     if st.session_state.start_time: # ストップウォッチ停止中
         total_time = time.time() - st.session_state.start_time
-        time_placeholder.write(f"**勉強時間: {format_time(total_time)}**")
+        time_placeholder.subheader(f"**{format_time(total_time)}**")
         gif_placeholder.image(first_frame) # gifを止める
     else: # 初期 or 記録ボタン押下後
-        time_placeholder.write("**勉強時間: 00:00:00**")
+        time_placeholder.subheader("**00:00:00**")
 # todo 毎秒画面更新されるので、部分的に更新する処理が可能か検討する
 # todo 5分以上経過で表示変える
 # todo gif要らないor別のものにする
