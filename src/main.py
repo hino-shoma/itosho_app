@@ -1,6 +1,8 @@
 import streamlit as st
 from services.db_operation import google_login
 from utility.applay_css import apply_custom_css
+from services.submenu import submenu
+st.write(submenu()) # メニュー一覧を表示
 st.set_page_config(
     page_title="すきまっくす",
     page_icon="🧊",
@@ -151,19 +153,6 @@ supabase = init_supabase()
 
 # ------ 勉強実績テーブルから連続日数を取得 ------
 import pandas as pd
-response = (supabase
-            .table("Result")
-            .select("date, time")
-            .eq("user_id", st.session_state["user_id"] )
-            .order("date", desc=False)
-            .execute()
-)
-dates = [record["date"] for record in response.data]
-df = pd.DataFrame(response.data)
-df["date"] = pd.to_datetime(df["date"])
-df["time"] = pd.to_numeric(df["time"])
-
-
 
 # --- 資格テーブルから試験日(exam_date)を取得 ---
 target_id = 2 # 現在は固定の資格idを取得
@@ -195,50 +184,87 @@ else:
     )
     weekly_target_text = f"{weekly_target_hours}時間 {weekly_target_minutes}分"
 
+response = (supabase
+            .table("Result")
+            .select("date, time")
+            .eq("user_id", st.session_state["user_id"] )
+            .order("date", desc=False)
+            .execute()
+)
+if len(response.data)>0:
+    dates = [record["date"] for record in response.data]
+    df = pd.DataFrame(response.data)
+    df["date"] = pd.to_datetime(df["date"])
+    df["time"] = pd.to_numeric(df["time"])
 
-# --- streamlitに表示 ---
-# 連続学習日数
-current_consecutive, max_consecutive = calc_consecutive(df["date"].tolist())
-current_consecutive_text = f"{current_consecutive}日"
-max_text = f"{max_consecutive}日"
+    # --- streamlitに表示 ---
+    # 連続学習日数
+    current_consecutive, max_consecutive = calc_consecutive(df["date"].tolist())
+    current_consecutive_text = f"{current_consecutive}日"
+    max_text = f"{max_consecutive}日"
 
-# 週間学習時間
-weekly_hours, weekly_minutes, delta_text = calc_weekly(df)
-weekly_text = f"{weekly_hours}時間 {weekly_minutes}分"
+    # 週間学習時間
+    weekly_hours, weekly_minutes, delta_text = calc_weekly(df)
+    weekly_text = f"{weekly_hours}時間 {weekly_minutes}分"
 
-# todo 目標学習時間に対する進捗の比較
+    # todo 目標学習時間に対する進捗の比較
 
-# ------ ダッシュボード ------
-# st.subheader("📌勉強ダッシュボード")
-cards_container = st.container(horizontal=True)
-with cards_container:
-    # 連続日数
-    with st.container(height = 220, border=True):
-        st.info("###### 🔥 連続学習日数")
-        # col1, col2 = st.columns(2, vertical_alignment="bottom")
-        # with col1:
-        st.metric("", current_consecutive_text, delta=f"best: {max_text}")
-        if max_consecutive == current_consecutive:
-            # with col2:
-            st.markdown(''':green[best更新中🎉]''')
-    
-    # 今週の学習時間
-    with st.container(height = 220, border=True):
-        st.info("###### 🖋 今週の学習時間")
-        st.metric("", weekly_text, "前週比: " + delta_text)
-    # todo 目標学習時間との比較
+    # ------ ダッシュボード ------
+    # st.subheader("📌勉強ダッシュボード")
+    cards_container = st.container(horizontal=True)
+    with cards_container:
+        # 連続日数
+        with st.container(height = 220, border=True):
+            st.info("###### 🔥 連続学習日数")
+            col1, col2 = st.columns(2, vertical_alignment="bottom")
+            with col1:
+                st.metric("", current_consecutive_text, delta=f"best: {max_text}")
+            if max_consecutive == current_consecutive:
+                with col2:
+                    st.markdown(''':green[best更新中🎉]''')
 
-    # 試験日までの日数
-    with st.container(height = 220, border=True):
-        st.info("###### 📅 試験まであと")
-        st.metric("", remaining_days_text, "")
+        # 今週の学習時間
+        with st.container(height = 220, border=True):
+            st.info("###### 🖋 今週の学習時間")
+            st.metric("", weekly_text, "前週比: " + delta_text)
+        # todo 目標学習時間との比較
 
-    with st.container(height = 220, border=True):
-        st.info("###### 📅 今までの勉強時間を例えるなら...")
-        with st.container(horizontal=True):
-            from services.show_image import show_image
-            show_image(st.session_state["user_id"])
+        # 試験日までの日数
+        with st.container(height = 220, border=True):
+            st.info("###### 📅 試験まであと")
+            st.metric("", remaining_days_text, "")
 
+        with st.container(height = 220, border=True):
+            st.info("###### 📅 今までの勉強時間を例えるなら...")
+            with st.container(horizontal=True):
+                from services.show_image import show_image
+                show_image(st.session_state["user_id"])
+else:
+    cards_container = st.container(horizontal=True)
+    with cards_container:
+        # 連続日数
+        with st.container(height = 220, border=True):
+            st.info("###### 🔥 連続学習日数")
+            # col1, col2 = st.columns(2, vertical_alignment="bottom")
+            # with col1:
+            st.metric("", "0日", delta=f"best: 0日")
+
+        # 今週の学習時間
+        with st.container(height = 220, border=True):
+            st.info("###### 🖋 今週の学習時間")
+            st.metric("", "0時間", "前週比: ー")
+        # todo 目標学習時間との比較
+
+        # 試験日までの日数
+        with st.container(height = 220, border=True):
+            st.info("###### 📅 試験まであと")
+            st.metric("", remaining_days_text, "")
+
+        with st.container(height = 220, border=True):
+            st.info("###### 📅 今までの勉強時間を例えるなら...")
+            with st.container(horizontal=True):
+                from services.show_image import show_image
+                show_image(st.session_state["user_id"])
 
 
 # ---------- ここからタイマー機能 ----------
@@ -258,8 +284,7 @@ if "accumulated_time" not in st.session_state:
     st.session_state.accumulated_time = 0  # 累積時間（トータル時間計算に利用）
 
 sb = st.sidebar
-from services.submenu import submenu
-st.write(submenu()) # メニュー一覧を表示
+
 sb.subheader("⏰勉強タイマー")
 
 # gifファイルパス（動作中に使用）

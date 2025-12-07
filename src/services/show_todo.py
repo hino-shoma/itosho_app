@@ -40,4 +40,4 @@ def todo_is_done():
         st.rerun()
         
 def go_to_todo_register_page():
-    st.switch_page("pages/llm-agent.py")
+    st.switch_page("pages/todo.py")
