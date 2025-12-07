@@ -6,13 +6,23 @@ from langchain_community.chat_message_histories import StreamlitChatMessageHisto
 from langchain_core.messages import BaseMessage
 from datetime import datetime,date
 import asyncio
+from services.submenu import submenu
+from services.db_operation import google_login
+from utility.applay_css import apply_custom_css
+st.set_page_config(page_title="勉強コーチングAI",
+                   layout="wide",
+                   initial_sidebar_state="expanded",)
+apply_custom_css("src/data/assets/css/style.css")
 
+
+st.title("勉強コーチングAI")
+session = google_login()
+st.session_state["user_id"] = session["user"]["id"] 
+submenu()
 if "exam_name_agent" not in st.session_state:
     import json
     from services.db_operation import init_supabase,google_login
     supabase =init_supabase()
-    session = google_login()
-    st.session_state["user_id"] = session["user"]["id"] 
 
     # ユーザの資格登録情報を取得（あとでLLMのシステムプロンプトに入れるため）
     # TODO:資格が複数入ってくるDBの場合はデータの抽出条件の追加対応が必要
@@ -65,7 +75,6 @@ def get_llm():
         streaming=True # ストリーミングあり
     )
 
-
 HISTORY_KEY = "langchain_messages" 
 
 def get_session_history(session_id: str) -> StreamlitChatMessageHistory:
@@ -96,11 +105,7 @@ def setup_runnable_chain():
     )
     return chain_with_history
 
-
 chain_with_history = setup_runnable_chain()
-
-st.set_page_config(page_title="勉強コーチングAI")
-st.title("勉強コーチングAI")
 
 # StreamlitChatMessageHistoryインスタンスを取得
 msgs = get_session_history(session_id="fixed_session_id") 
