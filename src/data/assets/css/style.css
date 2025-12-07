@@ -1,6 +1,9 @@
+/* ダッシュボードのタイトルを中央揃え */
 div[data-testid="stAlert"] {
     text-align: center;
 }
+
+/* ダッシュボードの数値を中央揃え */
 div[data-testid="stMetricValue"]{
     text-align: center;
 }
@@ -9,11 +12,77 @@ div[data-testid="stMetricDelta"]{
     text-align: center !important;
 }
 
-
+/* timerのボタンを中央揃え */
 div[data-testid="stHorizontalBlock"]{
     justify-content: center !important;
 }
 
+/* timerの時刻を中央揃え */
 div[data-testid='stMarkdownContainer']>h3{
     text-align: center;
+}
+
+/* デフォルトのページ切り替えナビを非表示 */
+[data-testid="stSidebarNav"] {
+    display: none !important;
+}
+/* ヘッダーに出るページタイトルも消したい場合 */
+header[data-testid="stHeader"] {
+    display: none !important;}
+
+
+/* タブの設定 */
+div[data-baseweb="tab-list"]{
+    justify-content: center !important;
+}
+
+button[data-testid="stTab"] {
+    /* タブの基本背景色とテキスト色 */
+    background-color: #f0f4f8; /* 非常に明るい青みがかったグレー */
+    color: #4b4b4b; /* 落ち着いたダークグレーのテキスト */
+    font-weight: bold !important;
+    
+    /* 角丸を適用 */
+    border-radius: 8px 8px 0 0; 
+    
+    /* 軽いボーダー */
+    border: 1px solid #e0e5ee; 
+    border-bottom: none; /* 下部のボーダーは非表示にし、アクティブなタブで強調する */
+
+    /* タブ間のスペース */
+    margin-right: 6px; 
+    
+    /* パディングでボタンを大きくする */
+    padding: 12px 24px;
+    
+    /* アニメーションのためのトランジション */
+    transition: all 0.3s ease-in-out;
+    
+    /* シャドウを軽く追加して立体感を出す */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* --- ホバー時のスタイル --- */
+button[data-testid="stTab"]:hover {
+    background-color: #e8ecf2;
+    color: #1f77b4; /* ホバー時にブランドカラーに変更 */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* --- アクティブ（選択中）なタブのスタイル --- */
+button[data-testid="stTab"][aria-selected="true"] {
+    /* アクティブなタブは目立つように白背景に */
+    background-color: #ffffff; 
+    color: #1f77b4; 
+    font-weight: 600 !important; 
+    border-bottom: 4px solid #1f77b4; /* 太い青い下線で強調する */
+    /* アクティブなタブはシャドウを強調 */
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.stTabs > div:nth-child(1) {
+    /* Streamlitのデフォルトの区切り線がある場合、それを調整または非表示にする */
+    border-bottom: 1px solid #e0e5ee; 
+    margin-bottom: 10px; 
+    padding-bottom: 0;
 }

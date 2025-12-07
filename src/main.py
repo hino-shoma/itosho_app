@@ -1,16 +1,13 @@
 import streamlit as st
 from services.db_operation import google_login
+from utility.applay_css import apply_custom_css
 st.set_page_config(
     page_title="すきまっくす",
     page_icon="🧊",
     layout="wide",
     initial_sidebar_state="expanded",
 )
-# cssの適用
-def apply_custom_css(css_file):
-    with open(css_file) as f:
-        css = f.read()
-    st.markdown(f'<style>{css}</style>', unsafe_allow_html=True)
+
 apply_custom_css("src/data/assets/css/style.css")
 
 # タイトル
@@ -230,18 +227,18 @@ with cards_container:
         st.info("###### 🖋 今週の学習時間")
         st.metric("", weekly_text, "前週比: " + delta_text)
     # todo 目標学習時間との比較
-    
+
     # 試験日までの日数
     with st.container(height = 220, border=True):
         st.info("###### 📅 試験まであと")
         st.metric("", remaining_days_text, "")
-        
+
     with st.container(height = 220, border=True):
         st.info("###### 📅 今までの勉強時間を例えるなら...")
         with st.container(horizontal=True):
             from services.show_image import show_image
             show_image(st.session_state["user_id"])
-        
+
 
 
 # ---------- ここからタイマー機能 ----------
