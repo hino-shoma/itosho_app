@@ -71,3 +71,26 @@ def insert_data(table_name: str, insert_data: dict)-> None:
     
     insert_data = json.loads(json.dumps(insert_data, default=json_serial))
     supabase.table(table_name).insert(insert_data).execute()
+
+def update_data(table_name: str, insert_data: dict,user_id)-> None:
+    """
+    指定したテーブルにデータを挿入する関数
+    Args:
+        table_name (str): 挿入するテーブル名
+        insert_data (dict): 挿入するデータ{列名：値, ...}
+        user_id:ユーザのUID
+    Returns: None
+    """
+    def json_serial(obj):
+        """
+        JSONシリアライズ可能な形式に変換するヘルパー関数
+        Args:
+            obj: シリアライズ可能な形式に変換するオブジェクト
+        Returns: シリアライズ可能な形式のオブジェクト"""
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        raise TypeError (f'Type {obj} not serializable')
+    
+    insert_data = json.loads(json.dumps(insert_data, default=json_serial))
+    supabase.table(table_name).update(insert_data).eq("user_id",user_id).execute()
+
