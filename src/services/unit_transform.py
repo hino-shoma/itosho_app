@@ -14,7 +14,7 @@ def total_to_week(exam_date:date,target_total_hours:int)-> int:
         tdatetime = datetime.strptime(exam_date, '%Y-%m-%d')
         exam_date = tdatetime.date()
     difference = exam_date - date.today()
-    if difference.days>=0:
+    if difference.days>0:
         target_week_hours = int(target_total_hours/difference.days*7)
     else:
         target_week_hours = 0

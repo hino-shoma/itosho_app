@@ -23,11 +23,7 @@ def show_image(user_id):
     # TODO:同じ時間に複数画像があると同じ内容しか表示されない
     content = df_filter["content"].iloc[-1]
     url = df_filter["image_url"].iloc[-1]
-    col1,col2 = st.columns(2)
-    with col1:
-        st.write(content)
-    with col2:
-        st.image(
-            url,
-            width="stretch"
-        )
+    st.image(
+        url,
+        width="content"
+    )
