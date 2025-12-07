@@ -102,7 +102,7 @@ with tabs[0]:
                 "learning_time":st.session_state["learning_time"]
             }
 
-            register = st.button("資格情報を更新する", key="register_button",on_click=update_data, args=("Learning materials", qualification_info))
+            register = st.button("資格情報を更新する", key="register_button",on_click=update_data, args=("Learning materials", qualification_info,st.session_state.user_id))
             if register:
                 st.success("資格情報を更新しました！")
 
