@@ -151,10 +151,19 @@ from services.study_result import calc_consecutive,calc_weekly,calc_weekly_targe
 supabase = init_supabase()
 
 
-# ------ 勉強実績テーブルから連続日数を取得 ------
+# ------ 教材テーブルと資格テーブルから目標学習時間と残り日数を計算 ------
 import pandas as pd
 
-# --- Learning materialsテーブルから試験日(exam_date)を取得 ---
+# --- 目標学習時間 ---
+response = (supabase
+            .table("Learning materials")
+            .select("learning_time")
+            .eq("user_id", st.session_state["user_id"])
+            .single()
+            .execute())
+target_hours = int(response.data["learning_time"]) # 週間目標学習時間（時間）
+
+# --- 教材テーブルから試験日(exam_date)を取得 ---
 response = (supabase
             .table("Learning materials")
             .select("exam_id, exam_date, learning_time")
@@ -191,6 +200,7 @@ else:
     )
     weekly_target_text = f"{weekly_target_hours}時間 {weekly_target_minutes}分"
 
+# ------ 勉強実績テーブルから連続日数を取得 ------
 response = (supabase
             .table("Result")
             .select("date, time")
@@ -210,11 +220,11 @@ if len(response.data)>0:
     current_consecutive_text = f"{current_consecutive}日"
     max_text = f"{max_consecutive}日"
 
-    # 週間学習時間
+    # 週間学習時間（実績）
     weekly_hours, weekly_minutes, delta_text = calc_weekly(df)
     weekly_text = f"{weekly_hours}時間 {weekly_minutes}分"
-
-    # todo 目標学習時間に対する進捗の比較
+    weekly_progress = weekly_hours / target_hours * 100
+    weekly_progress_text = f"{weekly_progress:.0f}%"
 
     # ------ ダッシュボード ------
     # st.subheader("📌勉強ダッシュボード")
@@ -233,8 +243,7 @@ if len(response.data)>0:
         # 今週の学習時間
         with st.container(height = 220, border=True):
             st.info("###### 🖋 今週の学習時間")
-            st.metric("", weekly_text, "前週比: " + delta_text)
-        # todo 目標学習時間との比較
+            st.metric("", weekly_text, "進捗率: " + weekly_progress_text)
 
         # 試験日までの日数
         with st.container(height = 220, border=True):
