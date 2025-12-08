@@ -154,51 +154,26 @@ supabase = init_supabase()
 # ------ 教材テーブルと資格テーブルから目標学習時間と残り日数を計算 ------
 import pandas as pd
 
-# --- 目標学習時間 ---
+# --- 教材テーブルから目標学習時間と試験日(exam_date)を取得 ---
 response = (supabase
             .table("Learning materials")
-            .select("learning_time")
+            .select("exam_id, learning_time, exam_date")
             .eq("user_id", st.session_state["user_id"])
             .single()
             .execute())
 target_hours = int(response.data["learning_time"]) # 週間目標学習時間（時間）
-
-# --- 教材テーブルから試験日(exam_date)を取得 ---
-response = (supabase
-            .table("Learning materials")
-            .select("exam_id, exam_date, learning_time")
-            .eq("user_id", st.session_state["user_id"])
-            .single() # ログイン中のユーザーの資格情報から1レコードだけ選択
-            .execute())
-exam_id_int8 = response.data["exam_id"]
-target_id = exam_id_int8
 exam_date_str = response.data["exam_date"]
 # todo CBTかどうかで場合分け
-
-response = (supabase
-            .table("qualification")
-            .select("exam_date, target_hours")
-            .eq("id", target_id)
-            .single()
-            .execute())
-target_seconds = int(response.data["target_hours"]) * 3600 # 目標学習時間を秒に変換
 
 # --- exam_dateが空欄だった場合の処理 ---
 if exam_date_str is None:
     remaining_days_text = ""
-    weekly_target_text = ""
 else:
     exam_date = datetime.date.fromisoformat(exam_date_str) # exam_dateをstrからdate型に変換
     # 試験日までの日数計算
     today = datetime.date.today()
     remaining_days = exam_date - today
     remaining_days_text = f"{remaining_days.days} 日"
-    # --- 週間目標学習時間の計算 ---
-    weekly_target_hours, weekly_target_minutes = calc_weekly_target(
-        target_seconds,
-        pd.to_datetime(exam_date)
-    )
-    weekly_target_text = f"{weekly_target_hours}時間 {weekly_target_minutes}分"
 
 # ------ 勉強実績テーブルから連続日数を取得 ------
 response = (supabase
