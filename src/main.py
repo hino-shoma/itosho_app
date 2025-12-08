@@ -154,9 +154,17 @@ supabase = init_supabase()
 # ------ 勉強実績テーブルから連続日数を取得 ------
 import pandas as pd
 
-# --- 資格テーブルから試験日(exam_date)を取得 ---
-target_id = 2 # 現在は固定の資格idを取得
-# todo qualificationテーブルから資格idを取ってくる処理が必要
+# --- Learning materialsテーブルから試験日(exam_date)を取得 ---
+response = (supabase
+            .table("Learning materials")
+            .select("exam_id, exam_date, learning_time")
+            .eq("user_id", st.session_state["user_id"])
+            .single() # ログイン中のユーザーの資格情報から1レコードだけ選択
+            .execute())
+exam_id_int8 = response.data["exam_id"]
+target_id = exam_id_int8
+exam_date_str = response.data["exam_date"]
+# todo CBTかどうかで場合分け
 
 response = (supabase
             .table("qualification")
@@ -164,7 +172,6 @@ response = (supabase
             .eq("id", target_id)
             .single()
             .execute())
-exam_date_str = response.data["exam_date"]
 target_seconds = int(response.data["target_hours"]) * 3600 # 目標学習時間を秒に変換
 
 # --- exam_dateが空欄だった場合の処理 ---
