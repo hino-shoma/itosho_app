@@ -260,7 +260,7 @@ else:
 
 # ---------- ここからタイマー機能 ----------
 # ライブラリインポート
-from services.timer import timer_start,timer_stop,timer_complete,timer_resume,format_time,timer_fragment
+from services.timer import timer_start,timer_stop,timer_complete,timer_resume,format_time,timer_fragment,study_dialog
 from PIL import Image
 import time
 # タイマー機能
@@ -301,40 +301,11 @@ with sb.container(horizontal=True):
 
 # ------ 勉強実績を直接入力 ------
 from services.timer import save_study_record
-# --- モーダル（ダイアログ）定義 ---
-@st.dialog("勉強時間の記録")
-def study_dialog():
-
-    # 勉強日の指定
-    date = st.date_input(
-        "勉強した日を入力してください",
-        key="date",
-        max_value="today")
-    # スライダーで勉強時間の指定
-    time = st.slider(
-        "勉強時間を選択してください",
-        min_value=15,
-        max_value=300,   # 5時間 = 300分
-        step=15,
-        value=60         # デフォルト1時間 = 60分
-    )
-
-    hours = time // 60
-    minutes = time % 60
-    st.write(f"勉強時間：{hours}時間{minutes}分（{time}分）")
-
-    # 記録ボタン
-    if st.button("勉強時間を記録", type="primary"):
-        save_study_record(st.session_state["user_id"], time)
-        st.success("勉強時間を記録しました！")
-        st.rerun()  # ダイアログを閉じる
-
 
 # --- サイドバーにボタン ---
 with st.container(horizontal = True,horizontal_alignment = "center"):
     if sb.button("勉強実績を直接入力", type="primary"):
         study_dialog()   # ダイアログを開く
-
 
 # fragment の呼び出し（部分更新）
 if st.session_state.running:
@@ -350,9 +321,7 @@ elif st.session_state.start_time: # ストップウォッチ停止中
 else: # 初期 or 記録ボタン押下後
     time_placeholder.subheader("**00:00:00**")
     gif_placeholder.image(first_frame)
-# todo 5分以上経過で表示変える
 # todo gif要らないor別のものにする
-
 
 #==========================TODOを1つずつ表示================================
 from services.show_todo import show_must_todo,todo_is_done,go_to_todo_register_page
