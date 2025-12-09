@@ -151,39 +151,31 @@ from services.study_result import calc_consecutive,calc_weekly,calc_weekly_targe
 supabase = init_supabase()
 
 
-# ------ 勉強実績テーブルから連続日数を取得 ------
+# ------ 教材テーブルと資格テーブルから目標学習時間と残り日数を計算 ------
 import pandas as pd
 
-# --- 資格テーブルから試験日(exam_date)を取得 ---
-target_id = 2 # 現在は固定の資格idを取得
-# todo qualificationテーブルから資格idを取ってくる処理が必要
-
+# --- 教材テーブルから目標学習時間と試験日(exam_date)を取得 ---
 response = (supabase
-            .table("qualification")
-            .select("exam_date, target_hours")
-            .eq("id", target_id)
+            .table("Learning materials")
+            .select("exam_id, learning_time, exam_date")
+            .eq("user_id", st.session_state["user_id"])
             .single()
             .execute())
+target_hours = int(response.data["learning_time"]) # 週間目標学習時間（時間）
 exam_date_str = response.data["exam_date"]
-target_seconds = int(response.data["target_hours"]) * 3600 # 目標学習時間を秒に変換
+# todo CBTかどうかで場合分け
 
 # --- exam_dateが空欄だった場合の処理 ---
 if exam_date_str is None:
     remaining_days_text = ""
-    weekly_target_text = ""
 else:
     exam_date = datetime.date.fromisoformat(exam_date_str) # exam_dateをstrからdate型に変換
     # 試験日までの日数計算
     today = datetime.date.today()
     remaining_days = exam_date - today
     remaining_days_text = f"{remaining_days.days} 日"
-    # --- 週間目標学習時間の計算 ---
-    weekly_target_hours, weekly_target_minutes = calc_weekly_target(
-        target_seconds,
-        pd.to_datetime(exam_date)
-    )
-    weekly_target_text = f"{weekly_target_hours}時間 {weekly_target_minutes}分"
 
+# ------ 勉強実績テーブルから連続日数を取得 ------
 response = (supabase
             .table("Result")
             .select("date, time")
@@ -203,11 +195,11 @@ if len(response.data)>0:
     current_consecutive_text = f"{current_consecutive}日"
     max_text = f"{max_consecutive}日"
 
-    # 週間学習時間
+    # 週間学習時間（実績）
     weekly_hours, weekly_minutes, delta_text = calc_weekly(df)
     weekly_text = f"{weekly_hours}時間 {weekly_minutes}分"
-
-    # todo 目標学習時間に対する進捗の比較
+    weekly_progress = weekly_hours / target_hours * 100
+    weekly_progress_text = f"{weekly_progress:.0f}%"
 
     # ------ ダッシュボード ------
     # st.subheader("📌勉強ダッシュボード")
@@ -226,8 +218,7 @@ if len(response.data)>0:
         # 今週の学習時間
         with st.container(height = 220, border=True):
             st.info("###### 🖋 今週の学習時間")
-            st.metric("", weekly_text, "前週比: " + delta_text)
-        # todo 目標学習時間との比較
+            st.metric("", weekly_text, "進捗率: " + weekly_progress_text)
 
         # 試験日までの日数
         with st.container(height = 220, border=True):
@@ -308,6 +299,41 @@ with sb.container(horizontal=True):
             st.button("スタート", width = 90, on_click = timer_start,type="primary") # 同上
     st.button("記録", width = 90, on_click = timer_complete) # 同上
 
+# ------ 勉強実績を直接入力 ------
+from services.timer import save_study_record
+# --- モーダル（ダイアログ）定義 ---
+@st.dialog("勉強時間の記録")
+def study_dialog():
+
+    # 勉強日の指定
+    date = st.date_input(
+        "勉強した日を入力してください",
+        key="date",
+        max_value="today")
+    # スライダーで勉強時間の指定
+    time = st.slider(
+        "勉強時間を選択してください",
+        min_value=15,
+        max_value=300,   # 5時間 = 300分
+        step=15,
+        value=60         # デフォルト1時間 = 60分
+    )
+
+    hours = time // 60
+    minutes = time % 60
+    st.write(f"勉強時間：{hours}時間{minutes}分（{time}分）")
+
+    # 記録ボタン
+    if st.button("勉強時間を記録", type="primary"):
+        save_study_record(st.session_state["user_id"], time)
+        st.success("勉強時間を記録しました！")
+        st.rerun()  # ダイアログを閉じる
+
+
+# --- サイドバーにボタン ---
+with st.container(horizontal = True,horizontal_alignment = "center"):
+    if sb.button("勉強実績を直接入力", type="primary"):
+        study_dialog()   # ダイアログを開く
 
 
 # fragment の呼び出し（部分更新）
