@@ -96,3 +96,31 @@ def timer_fragment(gif_path, first_frame):
         time_placeholder.subheader(f"**{format_time(total_time)}**")
         gif_placeholder.image(f"{gif_path}") # gifを動かす
         time.sleep(0.1)
+        
+# --- モーダル（ダイアログ）定義 ---
+@st.dialog("勉強時間の記録")
+def study_dialog():
+
+    # 勉強日の指定
+    date = st.date_input(
+        "勉強した日を入力してください",
+        key="date",
+        max_value="today")
+    # スライダーで勉強時間の指定
+    selected_minutes = st.slider(
+        "勉強時間を選択してください",
+        min_value=15,
+        max_value=300,   # 5時間 = 300分
+        step=15,
+        value=60         # デフォルト1時間 = 60分
+    )
+
+    hours = selected_minutes // 60
+    minutes = selected_minutes % 60
+    st.write(f"勉強時間：{hours}時間{minutes}分（{selected_minutes}分）")
+    selected_seconds = selected_minutes * 60
+
+    # 記録ボタン
+    if st.button("勉強時間を記録", type="primary"):
+        save_study_record(st.session_state["user_id"], selected_seconds)
+        st.rerun()  # ダイアログを閉じる
