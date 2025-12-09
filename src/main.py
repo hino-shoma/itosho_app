@@ -2,7 +2,7 @@ import streamlit as st
 from services.db_operation import google_login
 from utility.applay_css import apply_custom_css
 from services.submenu import submenu
-st.write(submenu()) # メニュー一覧を表示
+submenu() # メニュー一覧を表示
 st.set_page_config(
     page_title="すきまっくす",
     page_icon="🧊",

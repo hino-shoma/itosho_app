@@ -4,11 +4,13 @@ from supabase import create_client, Client
 import os
 import datetime
 from services.db_operation import google_login
-#============== ログイン処理=============================
-
+from utility.applay_css import apply_custom_css
+from services.submenu import submenu
+# ============== ログイン処理=============================
 session = google_login()
 st.session_state["user_id"] = session["user"]["id"] # セッションにuser_idを入れる
-
+apply_custom_css("src/data/assets/css/style.css")
+submenu()
 # Supabase接続
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
