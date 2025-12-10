@@ -1,15 +1,12 @@
 import streamlit as st
-from services.db_operation import google_login
-from utility.applay_css import apply_custom_css
-from services.submenu import submenu
-submenu() # メニュー一覧を表示
+
 st.set_page_config(
     page_title="すきまっくす",
     page_icon="🧊",
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
+from utility.applay_css import apply_custom_css
 apply_custom_css("src/data/assets/css/style.css")
 
 # タイトル
@@ -17,8 +14,13 @@ st.title("📓すきまっくす📓")
 st.markdown("🔥 *すき間時間を最大限に活用しよう！* 🔥")
 
 # ============== ログイン処理=============================
+from services.db_operation import google_login
+
 session = google_login()
 st.session_state["user_id"] = session["user"]["id"] # セッションにuser_idを入れる
+
+from services.submenu import submenu
+submenu() # メニュー一覧を表示
 
 # ============== 資格選択画面 ==============================
 from services.db_operation import init_supabase
