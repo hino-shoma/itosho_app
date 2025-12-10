@@ -9,7 +9,7 @@ from services.submenu import submenu
 # ============== ログイン処理=============================
 session = google_login()
 st.session_state["user_id"] = session["user"]["id"] # セッションにuser_idを入れる
-apply_custom_css("src/data/assets/css/style.css")
+apply_custom_css("src/data/assets/css/style.css", "src/data/assets/images/background-image.png")
 submenu()
 # Supabase接続
 SUPABASE_URL = st.secrets["SUPABASE_URL"]

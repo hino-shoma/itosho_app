@@ -7,7 +7,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 from utility.applay_css import apply_custom_css
-apply_custom_css("src/data/assets/css/style.css")
+apply_custom_css("src/data/assets/css/style.css", "src/data/assets/images/background-image.png")
 
 # タイトル
 st.title("📓すきまっくす📓")
@@ -168,17 +168,24 @@ supabase = init_supabase()
 # ------ 教材テーブルと資格テーブルから目標学習時間と残り日数を計算 ------
 import pandas as pd
 
+
 # --- 教材テーブルから目標学習時間と試験日(exam_date)を取得 ---
-response = (supabase
-            .table("Learning materials")
-            .select("exam_id, learning_time, exam_date")
-            .eq("user_id", st.session_state["user_id"])
-            .single()
-            .execute())
-target_hours = int(response.data["learning_time"]) # 週間目標学習時間（時間）
-exam_date_str = response.data["exam_date"]
+try:
+    st.session_state["is_exam_data"]=True
+    response = (supabase
+                .table("Learning materials")
+                .select("exam_id, learning_time, exam_date")
+                .eq("user_id", st.session_state["user_id"])
+                .single()
+                .execute())
+    target_hours = int(response.data["learning_time"]) # 週間目標学習時間（時間）
+    exam_date_str = response.data["exam_date"]
+except:
+    st.session_state["is_exam_data"]=False
 # todo CBTかどうかで場合分け
 
+if not st.session_state["is_exam_data"]:
+    st.stop()
 # --- exam_dateが空欄だった場合の処理 ---
 if exam_date_str is None:
     remaining_days_text = ""
