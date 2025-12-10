@@ -238,7 +238,7 @@ if len(response.data)>0:
             st.metric("", remaining_days_text, "")
 
         with st.container(height = 220, border=True):
-            st.info("###### 📅 今までの勉強時間を例えるなら...")
+            st.info("###### 💡 今の勉強時間は...")
             with st.container(horizontal=True):
                 from services.show_image import show_image
                 show_image(st.session_state["user_id"])
@@ -256,7 +256,6 @@ else:
         with st.container(height = 220, border=True):
             st.info("###### 🖋 今週の学習時間")
             st.metric("", "0時間", "前週比: ー")
-        # todo 目標学習時間との比較
 
         # 試験日までの日数
         with st.container(height = 220, border=True):
@@ -264,7 +263,7 @@ else:
             st.metric("", remaining_days_text, "")
 
         with st.container(height = 220, border=True):
-            st.info("###### 📅 今までの勉強時間を例えるなら...")
+            st.info("###### 💡 今の勉強時間は...")
             with st.container(horizontal=True):
                 from services.show_image import show_image
                 show_image(st.session_state["user_id"])
@@ -295,45 +294,9 @@ gif_path = "assets/images/running.gif"
 # 1フレーム目を取得（停止中に使用）
 img = Image.open(gif_path)
 first_frame = img.convert("RGBA") # gifを画像に変換
-# サイドバーに勉強時間を表示
-time_placeholder = sb.empty()
-gif_placeholder = sb.empty()
 
-# --- start<->stopボタンの切り替え（レスポンシブ） ---
-# start/記録ボタンをレスポンシブに配置
-with sb.container(horizontal=True):
-    if st.session_state.running:
-        st.button("ストップ", width = 90, on_click = timer_stop) # コールバック関数呼び出し
-    else:
-        if st.session_state.accumulated_time > 0:
-            st.button("再開", width = 90, on_click = timer_resume) # 同上
-        else:
-            st.button("スタート", width = 90, on_click = timer_start,type="primary") # 同上
-    st.button("記録", width = 90, on_click = timer_complete) # 同上
-
-# ------ 勉強実績を直接入力 ------
-from services.timer import save_study_record
-
-# --- サイドバーにボタン ---
-with st.container(horizontal = True,horizontal_alignment = "center"):
-    if sb.button("勉強実績を直接入力", type="primary"):
-        study_dialog()   # ダイアログを開く
-
-# fragment の呼び出し（部分更新）
-if st.session_state.running:
-    with st.sidebar:
-        # gifの 1 フレーム目（停止表示用）
-        img = Image.open(gif_path)
-        first_frame = img.convert("RGBA")
-        timer_fragment(gif_path, first_frame)
-elif st.session_state.start_time: # ストップウォッチ停止中
-    total_time = st.session_state.accumulated_time
-    time_placeholder.subheader(f"**{format_time(total_time)}**")
-    gif_placeholder.image(first_frame) # gifを止める
-else: # 初期 or 記録ボタン押下後
-    time_placeholder.subheader("**00:00:00**")
-    gif_placeholder.image(first_frame)
-# todo gif要らないor別のものにする
+with st.sidebar:
+    timer_fragment(st, gif_path, first_frame)
 
 #==========================TODOを1つずつ表示================================
 from services.show_todo import show_must_todo,todo_is_done,go_to_todo_register_page
