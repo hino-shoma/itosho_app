@@ -80,10 +80,10 @@ if len(exam_data)==0:
         from langchain_openai import ChatOpenAI
         from langchain.agents import create_agent
         from langgraph.checkpoint.memory import MemorySaver
-        from llm.tools import confirm_exam, insert_db, check_exam_in_db
+        from llm.tools import confirm_exam, insert_db, check_exam_in_db,calc_goal_learning_time
 
-        tools = [confirm_exam,check_exam_in_db,insert_db]
-        model = ChatOpenAI(model="gpt-5-nano", temperature=0)
+        tools = [confirm_exam,check_exam_in_db,insert_db,calc_goal_learning_time]
+        model = ChatOpenAI(model="gpt-4.1-nano", temperature=0.1,streaming=True)
 
 
         # Streamlitが再実行されても記憶が消えないように session_state に保存します
@@ -94,9 +94,21 @@ if len(exam_data)==0:
         prompt = """
             あなたは資格試験サポートのプロフェッショナルです。ユーザはどんな資格試験を受けるべきか迷っています。
             ユーザのニーズを聞き出し、資格試験の提案とデータベースの情報の確認や登録を行うエージェントです。
-            まず、ニーズを聞き出してから、資格試験の提案をしてください。
-            ユーザが資格名のみを伝えたら、check_exam_in_dbツールを使い、データベースにその資格名が存在するか確認してください。
-            ユーザが資格名と試験日を伝えたら、confirm_examツールを使い、ユーザに確認してください。
+            # 依頼
+            以下のSTEPに沿ってユーザのサポートをしてください。
+            
+            ## STEP1 受験する資格の提案・特定
+            ニーズを聞き出してから、資格試験の提案をしてください。
+            
+            ## STEP2 試験日の確認・特定
+            ユーザが資格名を伝えたら、confirm_examで資格名・受験日、CBT方式かどうかを取得し、
+            受験日がある場合は受験日を伝え、CBT方式の場合はユーザに受験日を確認してください
+            
+            ## STEP3 週の目標勉強時間の提案・特定
+            資格名と試験日の情報を集めたら、週の目標勉強時間をユーザに確認してください。確認する際に併せてcalc_goal_learning_timeで一般的な週の目標の勉強時間(h)をユーザに教えてください。
+            
+            ## STEP4 資格の登録
+            資格名・試験日・週の目標勉強時間(h)の情報が集まったらconfirm_examツールを使い、ユーザに確認してください。
             ユーザが資格名と試験日を承認したら、insert_dbツールを使い、データベースに登録してください。
             """
 
