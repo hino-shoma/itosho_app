@@ -3,6 +3,10 @@ div[data-testid="stAlert"] {
     text-align: center;
 }
 
+div[data-testid="stLayoutWrapper"]{
+    background-color: white;
+    opacity: 80;
+}
 /* ダッシュボードの数値を中央揃え */
 div[data-testid="stMetricValue"]{
     text-align: center;
@@ -22,15 +26,24 @@ div[data-testid='stMarkdownContainer']>h3{
     text-align: center;
 }
 
-/* デフォルトのページ切り替えナビを非表示 */
-[data-testid="stSidebarNav"] {
-    display: none !important;
+/* デフォルトのページ切り替えナビの非表示ルールは無効化（サイドバーを表示） */
+[data-testid="stSidebarNav"] { display: none !important; }
+
+/* サイドバーを確実に表示し、前面に出す */
+[data-testid="stSidebar"] {
+    display: block !important;
+    background-color: rgba(255, 255, 255, 0.95) !important;
 }
 /* ヘッダーに出るページタイトルも消したい場合 */
 header[data-testid="stHeader"] {
     display: none !important;}
 
-
+/* タイマーボタンの配置を中央揃え */
+div[data-testid="stVerticalBlock"]{
+    align-items: center !important;
+    background-color: white;
+    opacity: 80;
+}
 /* タブの設定 */
 div[data-baseweb="tab-list"]{
     justify-content: center !important;

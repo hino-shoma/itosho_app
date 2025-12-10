@@ -10,10 +10,10 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-apply_custom_css("src/data/assets/css/style.css")
+apply_custom_css("src/data/assets/css/style.css", "src/data/assets/images/background-image.png")
 
 
-
+st.subheader("資格情報の確認・変更")
 # if "user_id" not in st.session_state:
 session = google_login()
 st.session_state["user_id"] = session["user"]["id"] 
@@ -22,8 +22,16 @@ supabase = init_supabase()
 
 # TODO:資格が複数入ってくるDBの場合はデータの抽出条件の追加対応が必要
 exam_list = json.loads(supabase.table("Learning materials").select("*").eq("user_id",str(st.session_state.user_id)).execute().model_dump_json())
-exam_id = exam_list["data"][0]["exam_id"]
-exam =  json.loads(supabase.table("qualification").select("id,exam_name").eq("id",exam_id).execute().model_dump_json())
+
+if len(exam_list["data"])>0:
+    exam_id = exam_list["data"][0]["exam_id"]
+    exam =  json.loads(supabase.table("qualification").select("id,exam_name").eq("id",exam_id).execute().model_dump_json())
+else:
+    exam={"data":[{}]}
+    exam_list = {"data":[{}]}
+    st.warning("トップページで資格情報を登録してください")
+    st.stop()
+
 st.session_state["exam_name_setting"] = exam["data"][0].get("exam_name","情報なし")
 st.session_state["exam_date_setting"] = exam_list["data"][0].get("exam_date","情報なし")
 st.session_state["learning_materials_setting"] = exam_list["data"][0].get("learning_materials","情報なし")
@@ -49,7 +57,7 @@ data = {
 }
 df = pd.DataFrame(data)
 
-st.subheader("資格情報の確認・変更")
+
 st.dataframe(df,width="stretch",hide_index=True)
 
 
