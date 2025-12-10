@@ -110,10 +110,13 @@ with tabs[1]:
     from langchain_openai import ChatOpenAI
     from langchain.agents import create_agent
     from langgraph.checkpoint.memory import MemorySaver
-    from llm.tools import confirm_exam, insert_db, check_exam_in_db
+    from llm.tools import confirm_exam, update_db, check_exam_in_db, calc_goal_learning_time, set_user_id
 
-    tools = [confirm_exam,check_exam_in_db,insert_db]
-    model = ChatOpenAI(model="gpt-4.1-nano", temperature=0)
+    # ツールで使用するuser_idを設定
+    set_user_id(st.session_state["user_id"])
+
+    tools = [confirm_exam,check_exam_in_db,update_db,calc_goal_learning_time]
+    model = ChatOpenAI(model="gpt-4.1-nano", temperature=0.1,streaming=True)
 
 
     # Streamlitが再実行されても記憶が消えないように session_state に保存します
@@ -124,10 +127,22 @@ with tabs[1]:
     prompt = """
         あなたは資格試験サポートのプロフェッショナルです。ユーザはどんな資格試験を受けるべきか迷っています。
         ユーザのニーズを聞き出し、資格試験の提案とデータベースの情報の確認や登録を行うエージェントです。
-        まず、ニーズを聞き出してから、資格試験の提案をしてください。
-        ユーザが資格名のみを伝えたら、check_exam_in_dbツールを使い、データベースにその資格名が存在するか確認してください。
-        ユーザが資格名と試験日を伝えたら、confirm_examツールを使い、ユーザに確認してください。
-        ユーザが資格名と試験日を承認したら、insert_dbツールを使い、データベースに登録してください。
+        # 依頼
+        以下のSTEPに沿ってユーザのサポートをしてください。
+
+        ## STEP1 受験する資格の提案・特定
+        ニーズを聞き出してから、資格試験の提案をしてください。
+
+        ## STEP2 試験日の確認・特定
+        ユーザが資格名を伝えたら、confirm_examで資格名・受験日、CBT方式かどうかを取得し、
+        受験日がある場合は受験日を伝え、CBT方式の場合はユーザに受験日を確認してください
+
+        ## STEP3 週の目標勉強時間の提案・特定
+        資格名と試験日の情報を集めたら、週の目標勉強時間をユーザに確認してください。確認する際に併せてcalc_goal_learning_timeで一般的な週の目標の勉強時間(h)をユーザに教えてください。
+
+        ## STEP4 資格の登録
+        資格名・試験日・週の目標勉強時間(h)の情報が集まったらconfirm_examツールを使い、ユーザに確認してください。
+        ユーザが資格名と試験日を承認したら、update_dbツールを使い、データベースを更新してください。
         """
 
 
@@ -136,39 +151,54 @@ with tabs[1]:
     # スレッドIDの設定
     config = {"configurable": {"thread_id": "streamlit_user_id"}}
 
-    # チャット履歴の表示
-    snapshot = agent_executor.get_state(config)
-    st.chat_message("assistant").markdown("こんにちは！どんな資格をお探しですか？")
-    if snapshot.values:
-        for msg in snapshot.values["messages"]:
-            # LangGraphのメッセージ形式をStreamlitに合わせて表示
-            with st.chat_message(msg.type):
-                st.write(msg.content)
+    # チャット履歴用のスクロール可能なコンテナ
+    chat_display_container = st.container(height=400)
 
-    # ユーザ入力とLLM実行
-    if prompt := st.chat_input("何でも聞いてください"):
-        # ユーザーの入力を即時表示
-        with st.chat_message("user"):
-            st.write(prompt)
+    # 入力フォーム用のコンテナ
+    input_container = st.container()
 
-        # エージェントの実行と応答表示
-        with st.chat_message("assistant"):
-            # streamを使うと、文字が少しずつ出るような演出も可能です
-            response_container = st.empty()
-            full_response = ""
+    with chat_display_container:
+        # チャット履歴の表示
+        snapshot = agent_executor.get_state(config)
+        st.chat_message("assistant").markdown("こんにちは！どんな資格をお探しですか？")
+        if snapshot.values:
+            for msg in snapshot.values["messages"]:
+                # LangGraphのメッセージ形式をStreamlitに合わせて表示
+                if msg.type == "ai" and "tool_calls" not in msg.additional_kwargs:
+                    with st.chat_message(msg.type):
+                        st.write(msg.content)
 
-            # エージェントを実行 (入力は messages キーで渡す)
-            # stream_mode="values" でメッセージの更新を受け取る
-            events = agent_executor.stream(
-                {"messages": [("user", prompt)]},
-                config,
-                stream_mode="values"
-            )
+    with input_container:
+        st.divider()
+        # ユーザ入力とLLM実行
+        if prompt := st.chat_input("何でも聞いてください"):
+            # ユーザーの入力を即時表示
+            with chat_display_container:
+                with st.chat_message("user"):
+                    st.write(prompt)
 
-            for event in events:
-                # 最後のメッセージがAIからのものなら表示を更新
-                if "messages" in event:
-                    last_msg = event["messages"][-1]
-                    if last_msg.type == "ai":
-                        full_response = last_msg.content
-                        response_container.write(full_response)
+                # ユーザーメッセージを会話履歴に追加
+                snapshot = agent_executor.get_state(config)
+                latest_messages = list(snapshot.values["messages"]) if snapshot.values else []
+                # エージェントの実行と応答表示
+                with st.spinner("検討中です。。。"):
+                    with st.chat_message("assistant"):
+                        # streamを使うと、文字が少しずつ出るような演出も可能です
+                        response_container = st.empty()
+                        full_response = ""
+
+                        # エージェントを実行 (入力は messages キーで渡す)
+                        # stream_mode="values" でメッセージの更新を受け取る
+                        events = agent_executor.stream(
+                            {"messages": [("user", prompt)]},
+                            config,
+                            stream_mode="values"
+                        )
+
+                        for event in events:
+                            # 最後のメッセージがAIからのものなら表示を更新
+                            if "messages" in event:
+                                last_msg = event["messages"][-1]
+                                if last_msg.type == "ai" and "tool_calls" not in last_msg.additional_kwargs:
+                                    full_response = last_msg.content
+                                    response_container.write(full_response)

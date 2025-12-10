@@ -6,3 +6,4 @@ class ExamInfo(BaseModel):
     """Schema for exam information."""
     exam_name: str = Field(..., description="資格名")
     exam_date: date = Field(..., description="資格試験日")
+    learning_time: int = Field(..., description="週の目標勉強時間")
