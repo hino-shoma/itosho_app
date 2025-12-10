@@ -17,5 +17,5 @@ def total_to_week(exam_date:date,target_total_hours:int)-> int:
     if difference.days>0:
         target_week_hours = int(target_total_hours/difference.days*7)
     else:
-        target_week_hours = 0
+        target_week_hours = target_total_hours
     return  target_week_hours

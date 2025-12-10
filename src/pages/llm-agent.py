@@ -12,13 +12,14 @@ from utility.applay_css import apply_custom_css
 st.set_page_config(page_title="勉強コーチングAI",
                    layout="wide",
                    initial_sidebar_state="expanded",)
-apply_custom_css("src/data/assets/css/style.css")
+apply_custom_css("src/data/assets/css/style.css", "src/data/assets/images/background-image.png")
 
 
 st.title("勉強コーチングAI")
 session = google_login()
 st.session_state["user_id"] = session["user"]["id"] 
 submenu()
+
 if "exam_name_agent" not in st.session_state:
     import json
     from services.db_operation import init_supabase,google_login
@@ -27,8 +28,12 @@ if "exam_name_agent" not in st.session_state:
     # ユーザの資格登録情報を取得（あとでLLMのシステムプロンプトに入れるため）
     # TODO:資格が複数入ってくるDBの場合はデータの抽出条件の追加対応が必要
     exam_list = json.loads(supabase.table("Learning materials").select("*").eq("user_id",str(st.session_state.user_id)).execute().model_dump_json())
-    exam_id = exam_list["data"][0]["exam_id"]
-    exam =  json.loads(supabase.table("qualification").select("id,exam_name").eq("id",exam_id).execute().model_dump_json())
+    if len(exam_list["data"])>0:
+        exam_id = exam_list["data"][0]["exam_id"]
+        exam =  json.loads(supabase.table("qualification").select("id,exam_name").eq("id",exam_id).execute().model_dump_json())
+    else:
+        exam={"data":[{}]}
+        exam_list = {"data":[{}]}
     st.session_state["exam_name_agent"] = exam["data"][0].get("exam_name","情報なし")
     st.session_state["exam_date_agent"] = exam_list["data"][0].get("exam_date","情報なし")
     st.session_state["learning_materials_agent"] = exam_list["data"][0].get("learning_materials","情報なし")
@@ -119,7 +124,7 @@ def display_history(messages):
         else:
             index="あり"
         with st.chat_message("assistant"):
-            if st.session_state.exam_name_agent:
+            if not st.session_state.exam_name_agent=="情報なし":
                 st.markdown(f"""{st.session_state.exam_date_agent}の{st.session_state.exam_name_agent}のサポートをします！  
                             以下の登録情報を使いますね！  
                             **学習教材**： {st.session_state.learning_materials_agent}  
