@@ -2,7 +2,8 @@ import time
 import streamlit as st
 import datetime
 from services.db_operation import init_supabase
-
+from PIL import Image
+from streamlit_autorefresh import st_autorefresh
 
 
 # 時間をhh:mm:ss表示する関数
@@ -78,7 +79,6 @@ def timer_complete():
         save_study_record(st.session_state["user_id"] , total_time)
     else:
         st.warning("0秒の記録は保存しません。")
-    # todo 1分未満は保存しない、にしても良いかも
 
     # 初期化
     st.session_state.start_time = None
@@ -86,17 +86,50 @@ def timer_complete():
 
 # frangmentの定義
 @st.fragment
-def timer_fragment(gif_path, first_frame):
+def running_timer_fragment(gif_path, first_frame):
+    if st.session_state.running:
+        st_autorefresh(interval=1000, key="timer_refresh")
     time_placeholder = st.empty()
     gif_placeholder = st.empty()
     
     # 動作中
-    while st.session_state.running:
+    if st.session_state.running:
         total_time = (time.time() - st.session_state.start_time) + st.session_state.accumulated_time
         time_placeholder.subheader(f"**{format_time(total_time)}**")
         gif_placeholder.image(f"{gif_path}") # gifを動かす
-        time.sleep(0.1)
+
+@st.fragment
+def timer_fragment(sb, gif_path, first_frame):
+    time_placeholder = sb.empty()
+    gif_placeholder = sb.empty()
+    
+    # start/記録ボタンをレスポンシブに配置
+    with sb.container(horizontal=True):
+        col1, col2 = st.columns(2)
         
+        if st.session_state.running:
+            col1.button("ストップ", width = 90, on_click = timer_stop) # コールバック関数呼び出し
+            col2.button("記録", width = 90, on_click = timer_complete)
+        else:
+            if st.session_state.accumulated_time > 0: # タイマー稼働中
+                col1.button("再開", width = 90, on_click = timer_resume) # 同上
+                col2.button("記録", width = 90, on_click = timer_complete, type="primary") # 初期は表示しない
+            else: # 初期表示
+                col1.button("スタート", width = 90, on_click = timer_start,type="primary") # 同上
+                col2.button("直接入力", type="primary", on_click = study_dialog) # 直接入力画面をポップアップ表示
+
+    # fragment の呼び出し（部分更新）
+    if st.session_state.running: # タイマー動作中
+        img = Image.open(gif_path)
+        first_frame = img.convert("RGBA")
+        running_timer_fragment(gif_path, first_frame)
+    elif st.session_state.start_time: # ストップウォッチ停止中
+        total_time = st.session_state.accumulated_time
+        time_placeholder.subheader(f"**{format_time(total_time)}**")
+        gif_placeholder.image(first_frame) # gifを止める
+    else: # 初期 or 記録ボタン押下後
+        time_placeholder.subheader("**00:00:00**") # 初期はgif表示しない
+
 # --- モーダル（ダイアログ）定義 ---
 @st.dialog("勉強時間の記録")
 def study_dialog():
