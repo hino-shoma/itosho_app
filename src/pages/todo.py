@@ -73,7 +73,7 @@ edited = st.data_editor(
     width="stretch"
 )
 
-if st.button("保存"):
+if st.button("保存",type="primary"):
     # id を戻して結合する。
     df_updated = pd.concat([sorted_df[["id"]], edited], axis=1)
     
