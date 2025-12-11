@@ -83,12 +83,14 @@ def timer_complete():
     # 初期化
     st.session_state.start_time = None
     st.session_state.accumulated_time = 0
+    # rerunフラグ
+    st.session_state["do_rerun"] = True
 
-# frangmentの定義
+# タイマー動作中のfrangmentの定義
 @st.fragment
 def running_timer_fragment(gif_path, first_frame):
     if st.session_state.running:
-        st_autorefresh(interval=1000, key="timer_refresh")
+        st_autorefresh(interval=1000, key="timer_refresh") # 1秒ごとに自動更新して勉強時間表示を更新
     time_placeholder = st.empty()
     gif_placeholder = st.empty()
     
@@ -98,18 +100,20 @@ def running_timer_fragment(gif_path, first_frame):
         time_placeholder.subheader(f"**{format_time(total_time)}**")
         gif_placeholder.image(f"{gif_path}") # gifを動かす
 
+# タイマーのみ部分更新するfragmentの定義
 @st.fragment
 def timer_fragment(sb, gif_path, first_frame):
     time_placeholder = sb.empty()
     gif_placeholder = sb.empty()
     
-    # start/記録ボタンをレスポンシブに配置
+    # 各ボタン
     with sb.container(horizontal=True):
         col1, col2 = st.columns(2)
         
         if st.session_state.running:
-            col1.button("ストップ", width = 90, on_click = timer_stop) # コールバック関数呼び出し
-            col2.button("記録", width = 90, on_click = timer_complete)
+            col1.button("ストップ", width = 90, on_click = timer_stop, type="primary") # コールバック関数呼び出し
+            col2.button("記録", width = 90, on_click = timer_complete, type="tertiary")
+            
         else:
             if st.session_state.accumulated_time > 0: # タイマー稼働中
                 col1.button("再開", width = 90, on_click = timer_resume) # 同上
