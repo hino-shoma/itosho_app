@@ -119,43 +119,50 @@ if len(exam_data)==0:
 
         # スレッドIDの設定
         config = {"configurable": {"thread_id": "streamlit_user_id"}}
+            # チャット履歴用のスクロール可能なコンテナ
+        chat_display_container = st.container(height=400)
 
-        # チャット履歴の表示
-        snapshot = agent_executor.get_state(config)
-        st.chat_message("assistant").markdown("こんにちは！資格試験に関する情報をお手伝いします。")
-        if snapshot.values:
-            for msg in snapshot.values["messages"]:
-                # LangGraphのメッセージ形式をStreamlitに合わせて表示
-                with st.chat_message(msg.type):
-                    st.write(msg.content)
+        # 入力フォーム用のコンテナ
+        input_container = st.container()
 
-        # ユーザ入力とLLM実行
-        if prompt := st.chat_input("でも聞いてください"):
-            # ユーザーの入力を即時表示
-            with st.chat_message("user"):
-                st.write(prompt)
+        with chat_display_container:
+            # チャット履歴の表示
+            snapshot = agent_executor.get_state(config)
+            st.chat_message("assistant").markdown("こんにちは！どんな資格試験をお探しですか？")
+            if snapshot.values:
+                for msg in snapshot.values["messages"]:
+                    # LangGraphのメッセージ形式をStreamlitに合わせて表示
+                    with st.chat_message(msg.type):
+                        st.write(msg.content)
+        with input_container:
+            st.divider()
+            # ユーザ入力とLLM実行
+            if prompt := st.chat_input("でも聞いてください"):
+                # ユーザーの入力を即時表示
+                with st.chat_message("user"):
+                    st.write(prompt)
 
-            # エージェントの実行と応答表示
-            with st.chat_message("assistant"):
-                # streamを使うと、文字が少しずつ出るような演出も可能です
-                response_container = st.empty()
-                full_response = ""
+                # エージェントの実行と応答表示
+                with st.chat_message("assistant"):
+                    # streamを使うと、文字が少しずつ出るような演出も可能です
+                    response_container = st.empty()
+                    full_response = ""
 
-                # エージェントを実行 (入力は messages キーで渡す)
-                # stream_mode="values" でメッセージの更新を受け取る
-                events = agent_executor.stream(
-                    {"messages": [("user", prompt)]},
-                    config,
-                    stream_mode="values"
-                )
+                    # エージェントを実行 (入力は messages キーで渡す)
+                    # stream_mode="values" でメッセージの更新を受け取る
+                    events = agent_executor.stream(
+                        {"messages": [("user", prompt)]},
+                        config,
+                        stream_mode="values"
+                    )
 
-                for event in events:
-                    # 最後のメッセージがAIからのものなら表示を更新
-                    if "messages" in event:
-                        last_msg = event["messages"][-1]
-                        if last_msg.type == "ai":
-                            full_response = last_msg.content
-                            response_container.write(full_response)
+                    for event in events:
+                        # 最後のメッセージがAIからのものなら表示を更新
+                        if "messages" in event:
+                            last_msg = event["messages"][-1]
+                            if last_msg.type == "ai":
+                                full_response = last_msg.content
+                                response_container.write(full_response)
 
 # ------------ メイン画面 ------------
 # ライブラリインポート

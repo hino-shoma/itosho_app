@@ -20,26 +20,30 @@ session = google_login()
 st.session_state["user_id"] = session["user"]["id"] 
 submenu()
 
-if "exam_name_agent" not in st.session_state:
-    import json
-    from services.db_operation import init_supabase,google_login
-    supabase =init_supabase()
 
-    # ユーザの資格登録情報を取得（あとでLLMのシステムプロンプトに入れるため）
-    # TODO:資格が複数入ってくるDBの場合はデータの抽出条件の追加対応が必要
-    exam_list = json.loads(supabase.table("Learning materials").select("*").eq("user_id",str(st.session_state.user_id)).execute().model_dump_json())
-    if len(exam_list["data"])>0:
-        exam_id = exam_list["data"][0]["exam_id"]
-        exam =  json.loads(supabase.table("qualification").select("id,exam_name").eq("id",exam_id).execute().model_dump_json())
-    else:
-        exam={"data":[{}]}
-        exam_list = {"data":[{}]}
-    st.session_state["exam_name_agent"] = exam["data"][0].get("exam_name","情報なし")
-    st.session_state["exam_date_agent"] = exam_list["data"][0].get("exam_date","情報なし")
-    st.session_state["learning_materials_agent"] = exam_list["data"][0].get("learning_materials","情報なし")
-    st.session_state["learning_time_agent"] = exam_list["data"][0].get("learning_time","情報なし")
-    st.session_state["index_agent"] = exam_list["data"][0].get("index","情報なし")
+import json
+import pandas as pd
+from services.db_operation import init_supabase,google_login
+supabase =init_supabase()
 
+# ユーザの資格登録情報を取得（あとでLLMのシステムプロンプトに入れるため）
+# TODO:資格が複数入ってくるDBの場合はデータの抽出条件の追加対応が必要
+exam_list = json.loads(supabase.table("Learning materials").select("*").eq("user_id",str(st.session_state.user_id)).execute().model_dump_json())
+if len(exam_list["data"])>0:
+    exam_id = exam_list["data"][0]["exam_id"]
+    exam =  json.loads(supabase.table("qualification").select("id,exam_name").eq("id",exam_id).execute().model_dump_json())
+else:
+    exam={"data":[{}]}
+    exam_list = {"data":[{}]}
+st.session_state["exam_name_agent"] = exam["data"][0].get("exam_name","情報なし")
+st.session_state["exam_date_agent"] = exam_list["data"][0].get("exam_date","情報なし")
+st.session_state["learning_materials_agent"] = exam_list["data"][0].get("learning_materials","情報なし")
+st.session_state["learning_time_agent"] = exam_list["data"][0].get("learning_time","情報なし")
+st.session_state["index_agent"] = exam_list["data"][0].get("index","情報なし")
+
+todo_data=json.loads(supabase.table("todolist").select("title,content,start_date,end_date,done").eq("user_id",str(st.session_state.user_id)).execute().model_dump_json())["data"]
+if len(todo_data)>0:
+    st.session_state["todo_agent"] = pd.DataFrame(todo_data)
 
 # Streamlitが再実行されても記憶が消えないように session_state に保存します
 if "memory_support" not in st.session_state:
@@ -50,15 +54,18 @@ if "memory_support" not in st.session_state:
     - ユーザのニーズや状況を聞き出し、以下の前提条件のユーザに最適な学習方法やスケジュールを提案してください。
     
     # 前提条件
-    ユーザが受ける資格試験の情報は以下の通りです。
+    ユーザが受ける資格試験の情報・学習状況は以下の通りです。
 
+    ## 資格試験の状況
     資格名: {st.session_state.exam_name_agent}
     試験日: {st.session_state.exam_date_agent}
     学習教材: {st.session_state.learning_materials_agent}
     教材の目次:{st.session_state.index_agent}
     週の目標勉強時間:{st.session_state.learning_time_agent}時間
 
-    
+    ## 学習状況
+    学習の予定や勉強状況は以下のTODOデータで管理しています。doneがTrue以外は終わっていません。
+    {st.session_state.todo_agent}
     
     # 注意点
     - ユーザは資格試験の勉強の仕方や何をすべきかを迷っています。
@@ -125,11 +132,7 @@ def display_history(messages):
             index="あり"
         with st.chat_message("assistant"):
             if not st.session_state.exam_name_agent=="情報なし":
-                st.markdown(f"""{st.session_state.exam_date_agent}の{st.session_state.exam_name_agent}のサポートをします！  
-                            以下の登録情報を使いますね！  
-                            **学習教材**： {st.session_state.learning_materials_agent}  
-                            **教材の目次**：{index}  
-                            **週の目標勉強時間**：{st.session_state.learning_time_agent}  """)
+                st.markdown(f"""{st.session_state.exam_date_agent}の{st.session_state.exam_name_agent}のサポートをします！登録されている情報を使いますね！""")
             else:
                 st.write("資格勉強のサポートをしますね！")
     # 過去のメッセージをUIに再描画
@@ -171,14 +174,11 @@ async def async_stream_chain(prompt: str, chain) -> str:
 if prompt := st.chat_input("質問を入力してください"):
     # ユーザーメッセージを即座にUIに表示
     st.chat_message("user").markdown(prompt)
-    
     # アシスタントの応答コンテナ
     with st.chat_message("assistant"):
-        with st.spinner("ちょっと待ってくださいね。ただいま考え中です！"):
-            
-            # 2. 同期的なStreamlitの実行ブロック内で、非同期関数を同期的に実行
-            #    これにより、LLMへのAPIコール中のI/O待ちが非同期で処理されます
-            try:
-                asyncio.run(async_stream_chain(prompt, chain_with_history))
-            except Exception as e:
-                st.error(f"エラーが発生しました: {e}")
+        # 2. 同期的なStreamlitの実行ブロック内で、非同期関数を同期的に実行
+        #    これにより、LLMへのAPIコール中のI/O待ちが非同期で処理されます
+        try:
+            asyncio.run(async_stream_chain(prompt, chain_with_history))
+        except Exception as e:
+            st.error(f"エラーが発生しました: {e}")
