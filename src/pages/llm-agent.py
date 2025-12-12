@@ -44,7 +44,9 @@ st.session_state["index_agent"] = exam_list["data"][0].get("index","情報なし
 todo_data=json.loads(supabase.table("todolist").select("title,content,start_date,end_date,done").eq("user_id",str(st.session_state.user_id)).execute().model_dump_json())["data"]
 if len(todo_data)>0:
     st.session_state["todo_agent"] = pd.DataFrame(todo_data)
-
+else:
+    st.session_state["todo_agent"] = "todoなし"
+    
 # Streamlitが再実行されても記憶が消えないように session_state に保存します
 if "memory_support" not in st.session_state:
     system_prompt = f"""
