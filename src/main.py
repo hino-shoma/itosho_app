@@ -244,16 +244,16 @@ if len(response.data)>0:
                     st.markdown(''':green[best更新中🎉]''')
 
         # 今週の学習時間
-        with st.container(height = 230, border=True):
+        with st.container(height = 220, border=True):
             st.info("###### 🖋 今週の学習時間")
             st.metric("", weekly_text, "進捗率: " + weekly_progress_text)
 
         # 試験日までの日数
-        with st.container(height = 230, border=True):
+        with st.container(height = 220, border=True):
             st.info("###### 📅 試験まであと")
             st.metric("", remaining_days_text, "")
 
-        with st.container(height = 230, border=True):
+        with st.container(height = 220, border=True):
             st.info("###### 💡 今の勉強時間は...")
             with st.container(horizontal=True):
                 from services.show_image import show_image
@@ -262,23 +262,23 @@ else:
     cards_container = st.container(horizontal=True)
     with cards_container:
         # 連続日数
-        with st.container(height = 225, border=True):
+        with st.container(height = 220, border=True):
             st.info("###### 🔥 連続学習日数")
             # col1, col2 = st.columns(2, vertical_alignment="bottom")
             # with col1:
             st.metric("", "0日", delta=f"best: 0日")
 
         # 今週の学習時間
-        with st.container(height = 225, border=True):
+        with st.container(height = 220, border=True):
             st.info("###### 🖋 今週の学習時間")
             st.metric("", "0時間", "前週比: ー")
 
         # 試験日までの日数
-        with st.container(height = 225, border=True):
+        with st.container(height = 220, border=True):
             st.info("###### 📅 試験まであと")
             st.metric("", remaining_days_text, "")
 
-        with st.container(height = 225, border=True):
+        with st.container(height = 220, border=True):
             st.info("###### 💡 今の勉強時間は...")
             with st.container(horizontal=True):
                 from services.show_image import show_image
@@ -287,7 +287,7 @@ else:
 
 # ---------- ここからタイマー機能 ----------
 # ライブラリインポート
-from services.timer import timer_start,timer_stop,timer_complete,timer_resume,format_time,timer_fragment,study_dialog
+from services.timer import timer_fragment
 from PIL import Image
 import time
 # タイマー機能
@@ -313,12 +313,6 @@ first_frame = img.convert("RGBA") # gifを画像に変換
 
 with st.sidebar:
     timer_fragment(st, gif_path, first_frame)
-
-# 記録ボタン押下で全体画面更新
-if st.session_state.get("do_rerun", False):
-    st.session_state["do_rerun"] = False
-    time.sleep(1)
-    st.rerun()
 
 #==========================TODOを1つずつ表示================================
 from services.show_todo import show_must_todo,todo_is_done,go_to_todo_register_page

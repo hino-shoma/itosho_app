@@ -1,20 +1,19 @@
 import streamlit as st
 import pandas as pd
-from supabase import create_client, Client
 import os
 import datetime
+from services.db_operation import init_supabase
 from services.db_operation import google_login
 from utility.applay_css import apply_custom_css
 from services.submenu import submenu
 # ============== ログイン処理=============================
 session = google_login()
-st.session_state["user_id"] = session["user"]["id"] # セッションにuser_idを入れる
+st.session_state["user_id"] = session["user"]["id"]# セッションにuser_idを入れる
 apply_custom_css("src/data/assets/css/style.css", "src/data/assets/images/background-image.png")
 submenu()
+
 # Supabase接続
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase = init_supabase()
 
 st.title("ToDoリスト")
 st.write("<span style='color:red'>終了日が近い＆優先度の高いものから上から順番に表示しています</span>", unsafe_allow_html=True)
@@ -27,9 +26,12 @@ def load_data():
 def load_Learning_materials():
     response = supabase.table("Learning materials").select("exam_date").eq("user_id", st.session_state["user_id"]).execute()
     return pd.DataFrame(response.data)
-
 df = load_data()
-print(df)
+# 初回TODO登録
+if len(df)==0:
+    from services.todo import first_insert_todo
+    first_insert_todo()
+df = load_data()
 #文字列をそれぞれの型に変換する。
 df["id"] = df["id"].astype("Int8")
 df["start_date"] = pd.to_datetime(df["start_date"]).dt.date
